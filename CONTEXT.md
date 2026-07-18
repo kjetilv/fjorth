@@ -143,8 +143,11 @@ top, so R@ = I; J = peekReturn(2)).
 - **`DOES>` not implemented.** Blocker: its runtime must capture "rest of the
   currently executing colon body"; `run()`'s ip is a local variable invisible to
   primitives. Needs an exposed execution frame. Recorded in PLAN.md Phase 5.
-- **`+LOOP` termination simplified**: ascending → done when `index >= limit`,
-  descending → `index <= limit`. NOT ANS boundary-crossing semantics.
+- **`+LOOP`/`LOOP` termination**: boundary-crossing test
+  `(index < limit) != (next < limit)` in `Primitives.loopStep` — ANS-correct
+  except at 64-bit wraparound (full conformance would need the biased-index
+  overflow trick, changing `I`/`J`/`R@` representation). Consequence:
+  `0 0 DO ... LOOP` iterates ~2^64 times (ANS-correct; there is no `?DO`).
 - No `EVALUATE`, no string handling beyond `."`, no `HEX`/`BASE`, no `AGAIN`,
   no `UNLOOP` user word (only internal `(unloop)`), no `2SWAP/2OVER`.
 - `interpret()` is not reentrant (single `input`/`pos`) — matters if EVALUATE is
@@ -184,4 +187,6 @@ top, so R@ = I; J = peekReturn(2)).
 3. String/number polish: `HEX`/`DECIMAL`/`BASE`, `S"`, `TYPE`, `.R`.
 4. `EVALUATE` (requires reentrant tokenizer state — save/restore `input`/`pos`).
 5. Load `.fs` files from the command line (`Repl.main` args are ignored).
-6. ANS-correct `+LOOP` boundary-crossing termination.
+6. `?DO` (skip loop body when limit equals index — the usual guard now that
+   `0 0 DO` loops ~2^64 times), or full wraparound conformance via the
+   biased-index overflow representation.

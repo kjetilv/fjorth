@@ -76,9 +76,17 @@ class ControlFlowTest {
     }
 
     @Test
-    void plusLoopCountsDown() {
+    void plusLoopCountsDownIncludingLimit() {
         interpreter.interpret(": COUNTDOWN 0 5 DO I -1 +LOOP ;");
-        assertArrayEquals(new long[] {5, 4, 3, 2, 1}, stackAfter("COUNTDOWN"));
+        assertArrayEquals(new long[] {5, 4, 3, 2, 1, 0}, stackAfter("COUNTDOWN"));
+        assertEquals(0, machine.returnDepth());
+    }
+
+    @Test
+    void plusLoopTerminatesOnBoundaryCrossingRegardlessOfDirection() {
+        interpreter.interpret(": OVERSHOOT 5 0 DO I 10 +LOOP ;");
+        assertArrayEquals(new long[] {0}, stackAfter("OVERSHOOT"));
+        assertEquals(0, machine.returnDepth());
     }
 
     @Test

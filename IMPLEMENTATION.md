@@ -148,9 +148,14 @@ the first run.
 - Leave-site tracking added to `Definition` (see above).
 - Seal-time validation added (unresolved branch, unterminated `DO`) — not planned,
   but it converts wild runtime jumps from malformed definitions into compile errors.
-- `+LOOP` uses simplified termination (ascending: `index >= limit`; descending:
-  `index <= limit`) rather than ANS boundary-crossing semantics. Sufficient for
-  normal idioms; recorded in case standard conformance ever matters.
+- `+LOOP` initially used simplified sign-dependent termination rather than ANS
+  boundary-crossing semantics. Corrected after Phase 6: termination is now
+  `(index < limit) != (index + increment < limit)` — the index crossing the
+  boundary between `limit-1` and `limit` in either direction. This is
+  ANS-correct except at 64-bit wraparound (which would require the biased-index
+  overflow trick and change `I`/`J`/`R@` representation). Observable fix:
+  `0 10 DO I . -1 +LOOP` now includes 0, and termination no longer depends on
+  the increment's sign.
 
 ## Phase 5 — Memory model
 

@@ -26,15 +26,13 @@ public final class Primitives {
     );
 
     private static final Word LOOP_RUNTIME = primitive(
-        "(loop)", interpreter ->
-            loopStep(interpreter.machine(), interpreter.machine().popReturn() + 1, true)
+        "(loop)", interpreter -> loopStep(interpreter.machine(), 1)
     );
 
     private static final Word PLUS_LOOP_RUNTIME = primitive(
         "(+loop)", interpreter -> {
             Machine m = interpreter.machine();
-            long increment = m.pop();
-            loopStep(m, m.popReturn() + increment, increment >= 0);
+            loopStep(m, m.pop());
         }
     );
 
@@ -364,14 +362,16 @@ public final class Primitives {
         };
     }
 
-    private static void loopStep(Machine m, long index, boolean ascending) {
+    private static void loopStep(Machine m, long increment) {
+        long index = m.popReturn();
         long limit = m.peekReturn();
-        boolean done = ascending ? index >= limit : index <= limit;
-        if (done) {
+        long next = index + increment;
+        boolean crossed = (index < limit) != (next < limit);
+        if (crossed) {
             m.popReturn();
             m.push(-1);
         } else {
-            m.pushReturn(index);
+            m.pushReturn(next);
             m.push(0);
         }
     }
