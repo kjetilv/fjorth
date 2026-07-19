@@ -366,7 +366,7 @@ public final class Primitives {
         long index = m.popReturn();
         long limit = m.peekReturn();
         long next = index + increment;
-        boolean crossed = (index < limit) != (next < limit);
+        boolean crossed = index < limit != next < limit;
         if (crossed) {
             m.popReturn();
             m.push(-1);
