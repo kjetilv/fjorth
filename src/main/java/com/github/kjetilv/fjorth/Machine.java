@@ -20,6 +20,8 @@ public final class Machine {
 
     private int here;
 
+    private final int baseAddress;
+
     private boolean compiling;
 
     public Machine() {
@@ -34,6 +36,20 @@ public final class Machine {
         this.data = new long[dataStackSize];
         this.returns = new long[returnStackSize];
         this.memory = new long[memoryCells];
+        this.baseAddress = allot(1);
+        store(baseAddress, 10);
+    }
+
+    public int baseAddress() {
+        return baseAddress;
+    }
+
+    public int base() {
+        long base = fetch(baseAddress);
+        if (base < 2 || base > 36) {
+            throw new ForthException("invalid BASE: " + base);
+        }
+        return (int) base;
     }
 
     public void push(long value) {

@@ -2,7 +2,7 @@
 
 Companion to [PLAN.md](PLAN.md). One section per phase: what was executed, what was
 learned, and where and why the implementation deviated from the plan. All phases are
-complete; the suite stands at 98 tests.
+complete; post-plan work is logged at the end. The suite stands at 115 tests.
 
 ## Phase 0 — Project scaffolding
 
@@ -215,6 +215,34 @@ token.
   useful in a REPL.
 - `\ ( ."` had already become immediate in Phase 3; the bootstrap relies on this
   for its stack-effect comments.
+
+## Post-plan work
+
+### ANS-correct LOOP/+LOOP termination (2026-07-18)
+
+`loopStep` replaced the sign-dependent test with the boundary-crossing rule:
+terminate when `(index < limit) != (index + increment < limit)`. Details in the
+Phase 4 "Changes from plan" entry. Observable fixes: down-counting loops include
+the limit; termination is direction-independent. Known consequence: `0 0 DO`
+now loops ~2^64 times, which is ANS-correct (`?DO` is the standard's remedy and
+is not implemented).
+
+### String/number polish (2026-07-19)
+
+`BASE`, `HEX`, `DECIMAL`, `S"`, `TYPE`, `.R` added.
+
+- `BASE` is a true variable: `Machine` reserves memory cell 0 at construction
+  (so `here` starts at 1), initialized to 10, validated 2–36 on read. Because it
+  is a real address, `HEX` and `DECIMAL` are one-liners in `fjorth.fs`, and all
+  of parsing (`Interpreter.number`) and formatting (`.`, `.S`, `.R` via
+  `Primitives.formatted`, uppercase) share it.
+- `S"` needed no new `Word` variant: it copies the string into cell memory (one
+  char per cell) at parse/compile time and pushes/compiles two plain `Literal`s
+  (addr, len). Allocation is permanent in both modes — simple, predictable, and
+  each *interpreted* use consumes cells; compiled uses allocate once.
+- Learnings: compiled literals are immune to later `BASE` changes (values, not
+  text — a test pins this); reserving cell 0 broke one `Machine` test that
+  assumed all memory cells were free, the only fallout.
 
 ## Cross-phase observations
 

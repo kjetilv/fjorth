@@ -108,8 +108,19 @@ class MachineTest {
     @Test
     void allotBeyondMemoryFails() {
         Machine machine = new Machine(2, 2, 4);
-        machine.allot(4);
+        machine.allot(3);
         assertThrows(ForthException.class, () -> machine.allot(1));
+    }
+
+    @Test
+    void baseCellIsReservedAndInitializedToDecimal() {
+        Machine machine = new Machine();
+        assertEquals(10, machine.base());
+        assertEquals(10, machine.fetch(machine.baseAddress()));
+        machine.store(machine.baseAddress(), 16);
+        assertEquals(16, machine.base());
+        machine.store(machine.baseAddress(), 1);
+        assertThrows(ForthException.class, machine::base);
     }
 
     @Test

@@ -191,9 +191,9 @@ public final class Interpreter {
         return Optional.of(token);
     }
 
-    private static long number(String token) {
+    private long number(String token) {
         try {
-            return Long.parseLong(token);
+            return Long.parseLong(token, machine.base());
         } catch (NumberFormatException e) {
             throw new ForthException(token + " ?");
         }

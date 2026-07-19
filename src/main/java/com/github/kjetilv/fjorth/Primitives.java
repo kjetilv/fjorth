@@ -129,17 +129,34 @@ public final class Primitives {
                 }
             ),
             primitive(
-                ".", interpreter ->
-                    interpreter.print(interpreter.machine().pop() + " ")
+                ".", interpreter -> {
+                    Machine m = interpreter.machine();
+                    interpreter.print(formatted(m, m.pop()) + " ");
+                }
+            ),
+            primitive(
+                ".R", interpreter -> {
+                    Machine m = interpreter.machine();
+                    int width = (int) m.pop();
+                    String text = formatted(m, m.pop());
+                    interpreter.print(" ".repeat(Math.max(0, width - text.length())) + text);
+                }
             ),
             primitive(
                 ".S", interpreter -> {
-                    long[] stack = interpreter.machine().stack();
+                    Machine m = interpreter.machine();
+                    long[] stack = m.stack();
                     StringBuilder text = new StringBuilder("<").append(stack.length).append("> ");
                     for (long value : stack) {
-                        text.append(value).append(' ');
+                        text.append(formatted(m, value)).append(' ');
                     }
                     interpreter.print(text.toString());
+                }
+            ),
+            primitive(
+                "BASE", interpreter -> {
+                    Machine m = interpreter.machine();
+                    m.push(m.baseAddress());
                 }
             ),
             primitive(
@@ -155,6 +172,35 @@ public final class Primitives {
                     } else {
                         interpreter.print(text);
                     }
+                }
+            ),
+            immediate(
+                "S\"", interpreter -> {
+                    String text = interpreter.readUntil('"');
+                    Machine m = interpreter.machine();
+                    int address = m.allot(text.length());
+                    for (int i = 0; i < text.length(); i++) {
+                        m.store(address + i, text.charAt(i));
+                    }
+                    if (m.compiling()) {
+                        interpreter.append(Word.literal(address));
+                        interpreter.append(Word.literal(text.length()));
+                    } else {
+                        m.push(address);
+                        m.push(text.length());
+                    }
+                }
+            ),
+            primitive(
+                "TYPE", interpreter -> {
+                    Machine m = interpreter.machine();
+                    long length = m.pop();
+                    long address = m.pop();
+                    StringBuilder text = new StringBuilder();
+                    for (long i = 0; i < length; i++) {
+                        text.append((char) m.fetch(address + i));
+                    }
+                    interpreter.print(text.toString());
                 }
             ),
             immediate("(", interpreter -> interpreter.readUntil(')')),
@@ -416,5 +462,9 @@ public final class Primitives {
 
     private static long flag(boolean value) {
         return value ? -1 : 0;
+    }
+
+    private static String formatted(Machine m, long value) {
+        return Long.toString(value, m.base()).toUpperCase();
     }
 }

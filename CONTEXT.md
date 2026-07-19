@@ -8,7 +8,9 @@ Snapshot for resuming work. State as of 2026-07-18. Companion documents:
 
 A Forth implementation in Java 25, built in 7 phases (0–6), all complete.
 Gradle project `fjorth`, group `com.github.kjetilv`, package `com.github.kjetilv.fjorth`.
-98 tests, all passing. Working REPL.
+115 tests, all passing. Working REPL. Post-plan work so far: ANS boundary-crossing
+LOOP/+LOOP termination; BASE/HEX/DECIMAL, S", TYPE, .R (see IMPLEMENTATION.md
+"Post-plan work").
 
 ## Build and run
 
@@ -105,7 +107,8 @@ been committed. User has not asked for commits.
 
 - **`src/main/resources/com/github/kjetilv/fjorth/fjorth.fs`** — bootstrap, one
   definition per line, `\`-comment header. Defines IN FORTH: `2DUP 2DROP NIP TUCK
-  NEGATE ABS MIN MAX 1+ 1- 0< 0> <> TRUE FALSE ?DUP CELL+ SPACE SPACES`.
+  NEGATE ABS MIN MAX 1+ 1- 0< 0> <> TRUE FALSE ?DUP CELL+ HEX DECIMAL SPACE
+  SPACES`.
   These are NOT in Primitives.java (moved out in Phase 6).
 
 ## Word inventory (Java primitives)
@@ -114,12 +117,20 @@ been committed. User has not asked for commits.
 - Arithmetic: `+ - * / MOD` (division by zero → error)
 - Comparison/logic: `= < > 0= AND OR XOR INVERT` (truth: -1/0)
 - Return stack: `>R R> R@ I J`
-- I/O: `. .S EMIT CR ." ( \` (last three immediate; `."` is state-dependent:
-  prints when interpreting, compiles a printing closure when compiling)
+- I/O: `. .R .S EMIT CR TYPE ." S" ( \` (`."`, `S"`, `(`, `\` immediate; `."` is
+  state-dependent: prints when interpreting, compiles a printing closure when
+  compiling; `S"` copies the string into cell memory — one char per cell,
+  PERMANENTLY allotted at parse/compile time — and yields/compiles addr + len as
+  two Literals; `TYPE` is `( addr u -- )`; `.R` is `( n width -- )` right-aligned,
+  no trailing space; `.`/`.R`/`.S` format via BASE, uppercase)
 - Compiler: `: ; IMMEDIATE CONSTANT VARIABLE` (`;` immediate)
-- Memory: `@ ! +! HERE ALLOT CELLS , CREATE` (CELLS is identity — cell-addressed
-  memory; VARIABLE allots 1 cell and pushes address; CREATE pushes HERE at
-  creation, allots nothing; `,` stores + allots 1)
+- Memory: `@ ! +! HERE ALLOT CELLS , CREATE BASE` (CELLS is identity —
+  cell-addressed memory; VARIABLE allots 1 cell and pushes address; CREATE pushes
+  HERE at creation, allots nothing; `,` stores + allots 1; BASE pushes the
+  reserved cell-0 address — `Machine` reserves it at construction, initialized
+  to 10, so `here` starts at 1; `Machine.base()` validates 2–36 and is used by
+  number parsing (`Interpreter.number` → `Long.parseLong(token, base)`) and
+  output formatting (`Primitives.formatted`))
 - Control flow (all immediate): `IF ELSE THEN BEGIN UNTIL WHILE REPEAT DO LOOP
   +LOOP LEAVE EXIT RECURSE`
 - Tools: `WORDS` (deduplicated, newest first) `SEE` (one-line for straight-line
@@ -148,14 +159,18 @@ top, so R@ = I; J = peekReturn(2)).
   except at 64-bit wraparound (full conformance would need the biased-index
   overflow trick, changing `I`/`J`/`R@` representation). Consequence:
   `0 0 DO ... LOOP` iterates ~2^64 times (ANS-correct; there is no `?DO`).
-- No `EVALUATE`, no string handling beyond `."`, no `HEX`/`BASE`, no `AGAIN`,
-  no `UNLOOP` user word (only internal `(unloop)`), no `2SWAP/2OVER`.
+- No `EVALUATE`, no `AGAIN`, no `UNLOOP` user word (only internal `(unloop)`),
+  no `2SWAP/2OVER`. Strings are `."`/`S"`/`TYPE` only — no `C@`/`C!`, no counted
+  strings, no `S+`/`COMPARE`; each interpreted `S"` permanently allots its cells.
+- Numbers parse via `Long.parseLong(token, BASE)`: no `#`/`$`/`'c'` prefixes,
+  no double-cell numbers, dictionary lookup still shadows numbers (`BEEF` in HEX
+  is a number only if no word `BEEF` exists).
 - `interpret()` is not reentrant (single `input`/`pos`) — matters if EVALUATE is
   ever added.
 - `EXIT` inside DO..LOOP leaves loop params on the return stack (standard Forth
   requires UNLOOP first; user's responsibility).
 
-## Tests (src/test/java/..., 98 total)
+## Tests (src/test/java/..., 115 total)
 
 - `MachineTest` — stacks, memory, bounds. Constructs Machine directly.
 - `DictionaryTest` — shadowing, case, persistence. Uses raw `new Word.Primitive`.
@@ -183,10 +198,11 @@ top, so R@ = I; J = peekReturn(2)).
 ## Natural next steps (none requested yet)
 
 1. Initial git commit (user has not asked; everything is uncommitted).
-2. `DOES>` via an execution-frame refactor of `run()`.
-3. String/number polish: `HEX`/`DECIMAL`/`BASE`, `S"`, `TYPE`, `.R`.
-4. `EVALUATE` (requires reentrant tokenizer state — save/restore `input`/`pos`).
-5. Load `.fs` files from the command line (`Repl.main` args are ignored).
-6. `?DO` (skip loop body when limit equals index — the usual guard now that
+2. `DOES>` via an execution-frame refactor of `run()` — or the compile-time
+   split approach (immediate `DOES>` seals the build-time half and collects the
+   tail; see discussion 2026-07-19).
+3. `EVALUATE` (requires reentrant tokenizer state — save/restore `input`/`pos`).
+4. Load `.fs` files from the command line (`Repl.main` args are ignored).
+5. `?DO` (skip loop body when limit equals index — the usual guard now that
    `0 0 DO` loops ~2^64 times), or full wraparound conformance via the
    biased-index overflow representation.

@@ -17,5 +17,8 @@
 : FALSE ( -- 0 ) 0 ;
 : ?DUP ( n -- n n | 0 ) DUP IF DUP THEN ;
 : CELL+ ( addr -- addr+1 ) 1 + ;
+: HEX ( -- ) 16 BASE ! ;
+: DECIMAL ( -- ) 10 BASE ! ;
+: OCTAL ( -- 8) 8 BASE ! ;
 : SPACE ( -- ) 32 EMIT ;
 : SPACES ( n -- ) BEGIN DUP 0 > WHILE SPACE 1- REPEAT DROP ;
