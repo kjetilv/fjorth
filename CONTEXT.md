@@ -26,12 +26,6 @@ JAVA_HOME=~/.sdkman/candidates/java/current ./gradlew -q run --console=plain
 - REPL testing pattern: `printf '...\n...' | ./gradlew -q run --console=plain`.
 - JUnit 6 (jupiter), `useJUnitPlatform()`.
 
-## Git state
-
-Initial commit does not exist yet. The Gradle skeleton files are staged (git status
-`A`); all source, tests, resources, and the .md files are untracked. Nothing has
-been committed. User has not asked for commits.
-
 ## Source inventory (src/main/java/com/github/kjetilv/fjorth/)
 
 - **`Word.java`** — sealed interface, `name()` + `immediate()`. Variants (records):

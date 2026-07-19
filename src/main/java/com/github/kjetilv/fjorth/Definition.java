@@ -15,6 +15,7 @@ final class Definition {
 
     private final Deque<List<Integer>> loops = new ArrayDeque<>();
 
+    /// Held in an array to allow mutation in lambdas
     private final Word[] self = new Word[1];
 
     Definition(String name) {
@@ -78,8 +79,7 @@ final class Definition {
         if (!loops.isEmpty()) {
             throw new ForthException("unterminated DO in " + name);
         }
-        if (body.stream().anyMatch(Definition::unresolved)
-            || tail != null && tail.stream().anyMatch(Definition::unresolved)) {
+        if (unresolvedBody() || unresolvedTail()) {
             throw new ForthException("unresolved branch in " + name);
         }
         if (tail != null) {
@@ -88,6 +88,14 @@ final class Definition {
         Word.Colon colon = Word.colon(name, false, body);
         self[0] = colon;
         return colon;
+    }
+
+    private boolean unresolvedBody() {
+        return body.stream().anyMatch(Definition::unresolved);
+    }
+
+    private boolean unresolvedTail() {
+        return tail != null && tail.stream().anyMatch(Definition::unresolved);
     }
 
     private List<Word> active() {

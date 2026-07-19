@@ -9,7 +9,11 @@ public final class Primitives {
 
     public static Dictionary dictionary() {
         return words().stream()
-            .reduce(Dictionary.empty(), Dictionary::define, (first, second) -> second);
+            .reduce(
+                Dictionary.empty(),
+                Dictionary::define,
+                (_, second) -> second
+            );
     }
 
     private Primitives() {
