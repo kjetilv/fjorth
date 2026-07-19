@@ -30,7 +30,7 @@ final class Interpreter implements Fjorth {
             interpret(line);
             return OK;
         } catch (FjorthException e) {
-            return new Result.Failed(e.getMessage());
+            return new Result.Failed(e.getMessage(), this::reset);
         }
     }
 

@@ -4,10 +4,19 @@ import module java.base;
 
 public interface Out {
 
+    static Out std() {
+        return new Stdout();
+    }
+
+    static Out to(StringWriter output) {
+        return new Stdout(output);
+    }
+
     default void println(String s) {
         print(s);
         print("\n");
-    };
+        flush();
+    }
 
     default void print(char c) {
         print(Character.toString(c));

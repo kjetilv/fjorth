@@ -101,7 +101,7 @@ JAVA_HOME=~/.sdkman/candidates/java/current ./gradlew -q run --console=plain
 
 ## Resources
 
-- **`src/main/resources/com/github/kjetilv/fjorth/fjorth.fs`** — bootstrap, one
+- **`src/main/resources/fjorth.fs`** — bootstrap, one
   definition per line, `\`-comment header. Defines IN FORTH: `2DUP 2DROP NIP TUCK
   NEGATE ABS MIN MAX 1+ 1- 0< 0> <> TRUE FALSE ?DUP CELL+ HEX DECIMAL SPACE
   SPACES`.

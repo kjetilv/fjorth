@@ -11,7 +11,7 @@ class MemoryTest {
     private final Machine machine = new Machine();
 
     private final Interpreter interpreter =
-        Bootstrap.interpreter(machine, new Stdout(new StringWriter()));
+        Bootstrap.interpreter(machine, Out.to(new StringWriter()));
 
     private long[] stackAfter(String line) {
         interpreter.interpret(line);

@@ -1,20 +1,17 @@
 import com.github.kjetilv.fjorth.Fjorth;
+import com.github.kjetilv.fjorth.Out;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
-@SuppressWarnings("MethodMayBeStatic")
 void main() {
-    var fjorth = Fjorth.getDefault();
-    var out = fjorth.out();
     out.println("fjorth");
     try (var in = new BufferedReader(new InputStreamReader(System.in))) {
         for (String line = in.readLine(); line != null; line = in.readLine()) {
-            switch (fjorth.eval(line)) {
-                case Fjorth.Result.OK _ -> out.println(" ok");
-                case Fjorth.Result.Failed failed -> {
-                    out.print("\n" + failed.message());
-                    fjorth.reset();
+            try (var result = fjorth.eval(line)) {
+                switch (result) {
+                    case Fjorth.Result.OK _ -> out.println(" ok");
+                    case Fjorth.Result.Failed failed -> out.println(failed.message());
                 }
             }
         }
@@ -22,3 +19,7 @@ void main() {
         throw new IllegalStateException("Run failed", e);
     }
 }
+
+private static final Fjorth fjorth = Fjorth.getDefault();
+
+private static final Out out = fjorth.out();

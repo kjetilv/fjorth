@@ -12,7 +12,7 @@ class DoesTest {
     private final StringWriter output = new StringWriter();
 
     private final Interpreter interpreter =
-        Bootstrap.interpreter(machine, new Stdout(output));
+        Bootstrap.interpreter(machine, Out.to(output));
 
     private long[] stackAfter(String line) {
         interpreter.interpret(line);

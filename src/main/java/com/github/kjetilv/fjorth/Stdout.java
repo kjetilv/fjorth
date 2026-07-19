@@ -2,29 +2,24 @@ package com.github.kjetilv.fjorth;
 
 import module java.base;
 
-public final class Stdout implements Out {
+ final class Stdout implements Out {
 
     private final PrintWriter writer;
 
-    public Stdout() {
+     Stdout() {
         this((PrintWriter) null);
     }
 
-    public Stdout(StringWriter stringWriter) {
+    Stdout(StringWriter stringWriter) {
         this(stringWriter == null
             ? null
             : new PrintWriter(stringWriter));
     }
 
-    public Stdout(PrintWriter printWriter) {
+    Stdout(PrintWriter printWriter) {
         this.writer = printWriter == null
             ? new PrintWriter(System.out)
             : printWriter;
-    }
-
-    @Override
-    public void println(String s) {
-        writer.println(s);
     }
 
     @Override
