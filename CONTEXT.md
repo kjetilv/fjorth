@@ -1,221 +1,237 @@
 # fjorth — Session Context
 
-Snapshot for resuming work. State as of 2026-07-18. Companion documents:
-[PLAN.md](PLAN.md) (phase plan, all phases `Done`), [IMPLEMENTATION.md](IMPLEMENTATION.md)
-(per-phase execution log, learnings, deviations).
+Snapshot for resuming work. State as of 2026-07-19, verified against the actual
+sources on that date. Companion documents: [PLAN.md](PLAN.md) (original phase
+plan, all phases `Done`), [IMPLEMENTATION.md](IMPLEMENTATION.md) (per-phase
+execution log, learnings, deviations, post-plan work log).
 
 ## What this is
 
-A Forth implementation in Java 25, built in 7 phases (0–6), all complete.
-Gradle project `fjorth`, group `com.github.kjetilv`, package `com.github.kjetilv.fjorth`.
-141 tests, all passing. Post-plan work so far: fully ANS-conformant LOOP/+LOOP
-(biased-index wraparound representation); BASE/HEX/DECIMAL, S", TYPE, .R; DOES>;
-EVALUATE; ?DO (see IMPLEMENTATION.md "Post-plan work"). Git is managed by the
-user; do not commit unless asked. The user refactors between sessions
-(Fjorth/Out/Stdout abstractions, FjorthException, `Result`-based eval), so
-verify file contents before editing rather than trusting inventories verbatim.
-Entry point: `src/main/java/repl.java`, a Java 25 compact source file
-(implicit class, instance main; JEP 512) — `mainClass = "repl"`, uses
-`Fjorth.getDefault()` and try-with-resources on `eval`'s `Result` so Failed
-auto-resets. `gradle run` works.
+A Forth implementation in Java 25. Gradle project `fjorth`, group
+`com.github.kjetilv`, package `com.github.kjetilv.fjorth`. All 7 planned phases
+(0–6) complete, plus post-plan work: fully ANS-conformant `LOOP`/`+LOOP`
+(biased-index wraparound representation), `BASE`/`HEX`/`DECIMAL`/`OCTAL`, `S"`,
+`TYPE`, `.R`, `DOES>`, `EVALUATE`, `?DO`. 141 tests, all passing. Working REPL.
+
+## Working agreement
+
+- **Git is managed by the user.** Do not commit unless asked.
+- **The user refactors between sessions** (visibility tightening, renames, new
+  abstractions, style modernization). Verify current file contents before
+  editing; treat every inventory in this file as a starting point, not truth.
+- Tone and code style rules: user's global CLAUDE.md (machine-like tone, no
+  emojis; 4-space indent; functional style; immutability by default).
+- Observed house style in the current code: `import module java.base;`, `var`
+  for locals, package-private visibility unless public is required, static
+  factory methods at the top of types, constants at the BOTTOM of classes,
+  blank line between field declarations, JUnit assertions via
+  `import static org.junit.jupiter.api.Assertions.*`.
 
 ## Build and run
 
 ```
 JAVA_HOME=~/.sdkman/candidates/java/current ./gradlew test
-JAVA_HOME=~/.sdkman/candidates/java/current ./gradlew -q run --console=plain
+printf '1 2 + .\n' | JAVA_HOME=~/.sdkman/candidates/java/current ./gradlew -q run --console=plain
 ```
 
 - The environment's `JAVA_HOME` points to a REMOVED JDK (`25.0.2-graalce`); the
-  override above is required for every `./gradlew` invocation. Installed JDKs:
-  25.0.3-graal, 25.0.3-tem, 26.0.1-oracle, 26.0.1-zulu (sdkman). Gradle toolchain
-  is pinned to Java 25 in `build.gradle.kts`.
-- REPL testing pattern: `printf '...\n...' | ./gradlew -q run --console=plain`.
-- JUnit 6 (jupiter), `useJUnitPlatform()`.
+  override above is required for every `./gradlew` invocation. Installed JDKs
+  (sdkman): 25.0.3-graal, 25.0.3-tem, 26.0.1-oracle, 26.0.1-zulu.
+- Toolchain pinned to Java 25 in `build.gradle.kts`. The code uses Java 25
+  features throughout: module imports (JEP 511), compact source files /
+  instance main (JEP 512), unnamed patterns (`_`), record deconstruction.
+- JUnit 6 (junit-bom 6.0.0, jupiter), `useJUnitPlatform()`.
 
-## Source inventory (src/main/java/com/github/kjetilv/fjorth/)
+## Architecture
 
-- **`Word.java`** — sealed interface, `name()` + `immediate()`. Variants (records):
-  - `Primitive(String name, boolean immediate, Effect effect)`
-  - `Colon(String name, boolean immediate, List<Word> body)` — compact constructor
-    does `List.copyOf`
-  - `Literal(long value)` — pushes value; name `(literal)`
+### Public API (3 types; everything else package-private)
+
+- **`Fjorth`** — the facade interface. `static getDefault()` /
+  `getDefault(Out)` build a bootstrapped instance. `eval(String)` returns a
+  sealed `Result` (`OK` | `Failed(message, closer)`); `Result` is
+  `AutoCloseable`, and `Failed.close()` runs its closer — the REPL uses
+  try-with-resources so a failure auto-resets the machine. Also `reset()`,
+  `out()`.
+- **`Out`** — output abstraction. `Out.std()` (System.out), `Out.to(StringWriter)`
+  (tests). `print(String)`, `print(char)`, `println`, `flush`. Implemented by
+  package-private `Stdout` (PrintWriter-backed; `flush()` throws
+  IllegalStateException on writer error).
+- **`FjorthException`** — runtime error carrying a message; package-private
+  constructor. `locate(line, position)` appends `\n<line>\n<spaces>^` caret
+  context ONCE (no-op if already located) — innermost location wins, which is
+  what makes EVALUATE errors point into the evaluated text.
+
+### Entry point
+
+`src/main/java/repl.java` — a compact source file (implicit class, instance
+`main()`, unnamed package). `build.gradle.kts` has `mainClass = "repl"` and
+wires stdin into the `run` task. It uses `Fjorth.getDefault()` and
+try-with-resources over `eval`'s Result. Its `args` are currently ignored
+(candidate: `.fs` file loading).
+
+### Core (package-private, in com.github.kjetilv.fjorth)
+
+- **`Word`** — sealed interface, `name()` + `immediate()`, with static factory
+  methods (`Word.primitive(name, effect)`, `primitive(name, immediate, effect)`,
+  `colon`, `literal`, `branch`, `zeroBranch`). Variants (records):
+  - `Primitive(name, immediate, Effect effect)`
+  - `Colon(name, immediate, List<Word> body)` — compact constructor `List.copyOf`
+  - `Literal(long)` — name `(literal)`
   - `Branch(int target)`, `ZeroBranch(int target)` — target is an ABSOLUTE body
     index; `-1` = unresolved placeholder; `Integer.MAX_VALUE` = EXIT sentinel
-  - Nested `@FunctionalInterface Effect { void apply(Interpreter); }` — takes
-    Interpreter, NOT Machine (changed in Phase 2: parsing/IO words need it)
-- **`Machine.java`** — mutable interpreter state: data stack + return stack
-  (`long[]` + top index, default 256, ctor-configurable), cell memory
-  (`long[]`, default 4096 cells) with `here`/`allot(int)`/`fetch`/`store`
-  (bounds-checked, `allot` guards negative below zero), STATE flag
-  (`compiling()`/`compiling(boolean)`), `peekReturn(int offset)` (0 = top; J uses
-  offset 2), `stack()` returns copy bottom-first, `reset()` clears stacks + STATE
-  but NOT memory/here.
-- **`Dictionary.java`** — persistent chain (word + parent), `EMPTY` singleton.
-  `define(Word)` returns new head; `lookup(String)` walks newest-first,
-  case-insensitive (`equalsIgnoreCase`); `latest()`; `words()` returns
-  `Stream<Word>` newest-first (used by WORDS). Shadowing works because compiled
-  bodies hold direct Word references.
-- **`Definition.java`** (package-private) — the open colon definition during
-  compilation. Mutable `ArrayList<Word> body` plus a nullable `tail` list opened
-  by `beginTail()` (DOES>); `append`/`size`/`resolve` operate on the ACTIVE list
-  (tail once open, body before); `resolve(index, target)` re-creates the branch
-  record at index, preserving its kind;
-  `beginLoop()`/`addLeave(index)`/`endLoop()` — a `Deque<List<Integer>>` of LEAVE
-  sites per DO-nesting level; `recurse()` returns a primitive closing over a
-  one-element `Word[] self` that `seal()` fills with the finished Colon;
-  `seal()` validates (no unterminated DO, no branch target < 0) then returns
-  immutable `Word.Colon`.
-- **`Interpreter.java`** — outer interpreter + executor. Holds `Machine`,
-  mutable `Dictionary` head, `PrintWriter out`, current `Definition`, and
-  tokenizer state (`input`, `pos`, `tokenStart`).
-  - `interpret(String line)`: token loop; wraps any ForthException with context
-    (`message\n<input line>\n<spaces>^` caret at `tokenStart`); flushes out.
-  - `handle(token)`: lookup → if compiling && !immediate → append, else execute;
-    number fallback (`Long.parseLong`) → Literal when compiling, push otherwise;
-    unknown → `token ?`.
-  - `execute(Word)`: switch — Primitive applies effect, Colon runs, Literal
-    pushes, bare Branch/ZeroBranch throw.
-  - `run(Colon)`: indexed loop, local `int ip`; Branch → ip = target;
-    ZeroBranch → pop, jump if 0; nested Colons recurse in Java (JVM call stack
-    is the return-address stack; explicit return stack only for >R/R>/loops).
-  - Tokenizer: `nextToken()` skips leading whitespace, reads to whitespace,
-    consumes EXACTLY ONE trailing delimiter char (this is what makes `." x"`
-    not print a leading space); `readUntil(char)`, `readRestOfLine()`,
-    `word(String requester)` (next token or "requester: missing name").
-  - Compiler API: `beginDefinition(name)`, `endDefinition()`, `append(Word)`,
-    `open()` (package-private, throws "compilation outside definition"),
-    `define(Word)`, `makeLatestImmediate()` (shadows latest Colon with immediate
-    copy; non-Colon → error), `dictionary()`, `reset()` (machine reset + drop
-    open definition — REPL calls this on error).
-- **`Primitives.java`** — all built-in words as a `List<Word>` reduced onto
-  `Dictionary.empty()`. Helpers: `primitive(name, effect)`, `immediate(name,
-  effect)`, `unary(LongUnaryOperator)`, `binary(LongBinaryOperator)` (pops b then
-  a, pushes op(a,b)), `flag(boolean)` → -1/0. Static runtime words `DO_RUNTIME
-  (do)`, `LOOP_RUNTIME (loop)`, `PLUS_LOOP_RUNTIME (+loop)`, `UNLOOP_RUNTIME
-  (unloop)`; `loopStep(machine, index, ascending)` pushes 0 (continue) / -1
-  (exit, drops params) consumed by a ZeroBranch back to body start;
-  `closeLoop(interpreter, runtime)` shared by LOOP/+LOOP. `render`/`renderColon`/
-  `cell` implement SEE.
-- **`Bootstrap.java`** — `interpreter(Machine, PrintWriter)` builds an Interpreter
-  over `Primitives.dictionary()` then interprets each line of the resource
-  `fjorth.fs` (classpath, same package). ALL test fixtures and the REPL go through
-  this, so the bootstrap is validated by the whole suite.
-- **`repl.java`** — main. Prints `fjorth` banner; per line: interpret + ` ok`, on
-  ForthException print message (already has caret context) + `interpreter.reset()`.
-  Dictionary/memory survive errors.
-- **`ForthException.java`** — RuntimeException with message only.
+  - `Effect { void apply(Interpreter); }` — takes Interpreter (parsing/IO words
+    need tokenizer and output access)
+- **`Machine`** — mutable state: data + return stacks (`long[]` + top, default
+  256, ctor-configurable), cell memory (`long[]`, default 4096). Memory cell 0
+  is RESERVED for BASE (allotted in the constructor, initialized 10), so `here`
+  starts at 1. `base()` validates 2–36. `allot` guards overflow and
+  below-zero; `fetch`/`store` bounds-check. `peekReturn(int offset)` (0 = top).
+  `stack()` returns a bottom-first copy. `reset()` clears stacks + compiling
+  flag but NOT memory/here.
+- **`Dictionary`** — persistent chain (word + parent), `Dictionary.empty()`
+  singleton. `define` returns a new head; `lookup` walks newest-first,
+  case-insensitive; `latest()`; `words()` streams newest-first. Shadowing is
+  free; compiled bodies hold direct `Word` references, so redefinition never
+  disturbs old callers.
+- **`Definition`** — the open colon definition during compilation. Mutable
+  body list + nullable `tail` list opened by `beginTail()` (DOES>);
+  `append`/`size`/`resolve` operate on the ACTIVE list (tail once open).
+  `resolve(index, target)` re-creates the branch record in place, preserving
+  kind. Loop scoping: `beginLoop`/`addLeave`/`endLoop` over a
+  `Deque<List<Integer>>` of LEAVE sites. `recurse()` returns a primitive
+  closing over a one-element `Word[] self` filled by `seal()` (the RECURSE
+  chicken-and-egg: a lambda must capture a final reference whose slot is
+  assigned later; array over `this`-capture so compiled words do not retain
+  the whole Definition). `seal()` validates (no unterminated DO, no branch
+  target < 0 in body OR tail), appends the `(does>)` retrofit word if a tail
+  exists, and returns the immutable `Word.Colon`.
+- **`Interpreter`** — implements `Fjorth`; outer interpreter + executor. Holds
+  Machine, mutable Dictionary head, Out, current Definition, tokenizer state
+  (`input`/`pos`/`tokenStart`).
+  - `eval(line)`: `interpret` + catch → `Result.Failed(message, this::reset)`.
+  - `interpret(line)`: token loop; flushes Out in finally.
+  - `evaluate(text)`: REENTRANT — saves/restores tokenizer state around the
+    token loop; used by EVALUATE, nests arbitrarily.
+  - Token loop wraps FjorthException with `locate(input, tokenStart)`.
+  - `handle(token)`: dictionary lookup → compiling && !immediate ? append :
+    execute; else number via `Long.parseLong(token, machine.base())` → Literal
+    when compiling, push otherwise; unknown → `token ?`.
+  - `execute(Word...)`: Primitive applies effect; Colon runs via `run` (local
+    indexed ip; Branch sets ip, ZeroBranch pops and jumps on 0; nested colons
+    recurse in Java — the JVM call stack is the return-address stack; the
+    explicit return stack serves >R/R>/loop params only).
+  - Tokenizer: `nextToken()` consumes EXACTLY ONE trailing delimiter char
+    (this is what makes `." x"` print without a leading space);
+    `readUntil(char)`, `readRestOfLine()`, `word(requester)`.
+  - Compiler API: `beginDefinition`/`endDefinition`/`append`/`open()`/
+    `define`/`makeLatestImmediate` (shadows latest Colon with an immediate
+    copy). `reset()` = machine reset + drop open definition.
+- **`Primitives`** — all built-in words as a `List<Word>` reduced onto the
+  empty dictionary. Helpers: `primitive`/`immediate`/`unary`/`binary` (binary
+  pops b then a, pushes op(a,b)), `flag(boolean)` → -1/0, `formatted(m, value)`
+  (BASE-aware, uppercase), `poppedString(m)` (addr+len cell string, shared by
+  TYPE/EVALUATE). SEE rendering in `render`/`renderColon`/`cell`.
+- **`Bootstrap`** — `interpreter(Machine, Out)` builds an Interpreter over
+  `Primitives.dictionary()` and interprets each line of `fjorth.fs`, loaded
+  from the CLASSPATH ROOT via the context classloader
+  (`src/main/resources/fjorth.fs` — NOT under the package directory). All test
+  fixtures and `Fjorth.getDefault` go through this, so the whole suite
+  validates the bootstrap.
 
-## Resources
+## Word inventory
 
-- **`src/main/resources/fjorth.fs`** — bootstrap, one
-  definition per line, `\`-comment header. Defines IN FORTH: `2DUP 2DROP NIP TUCK
-  NEGATE ABS MIN MAX 1+ 1- 0< 0> <> TRUE FALSE ?DUP CELL+ HEX DECIMAL SPACE
-  SPACES`.
-  These are NOT in Primitives.java (moved out in Phase 6).
-
-## Word inventory (Java primitives)
+Java primitives:
 
 - Stack: `DUP DROP SWAP OVER ROT`
 - Arithmetic: `+ - * / MOD` (division by zero → error)
 - Comparison/logic: `= < > 0= AND OR XOR INVERT` (truth: -1/0)
-- Return stack: `>R R> R@ I J`
-- I/O: `. .R .S EMIT CR TYPE ." S" ( \` (`."`, `S"`, `(`, `\` immediate; `."` is
-  state-dependent: prints when interpreting, compiles a printing closure when
-  compiling; `S"` copies the string into cell memory — one char per cell,
-  PERMANENTLY allotted at parse/compile time — and yields/compiles addr + len as
-  two Literals; `TYPE` is `( addr u -- )`; `.R` is `( n width -- )` right-aligned,
-  no trailing space; `.`/`.R`/`.S` format via BASE, uppercase)
-- `EVALUATE` `( addr u -- )` — reads the cell string (shares `poppedString` with
-  TYPE) and feeds it to `Interpreter.evaluate`
-- Compiler: `: ; IMMEDIATE CONSTANT VARIABLE DOES>` (`;` and `DOES>` immediate)
-- Memory: `@ ! +! HERE ALLOT CELLS , CREATE BASE` (CELLS is identity —
-  cell-addressed memory; VARIABLE allots 1 cell and pushes address; CREATE pushes
-  HERE at creation, allots nothing; `,` stores + allots 1; BASE pushes the
-  reserved cell-0 address — `Machine` reserves it at construction, initialized
-  to 10, so `here` starts at 1; `Machine.base()` validates 2–36 and is used by
-  number parsing (`Interpreter.number` → `Long.parseLong(token, base)`) and
-  output formatting (`Primitives.formatted`))
-- Control flow (all immediate): `IF ELSE THEN BEGIN UNTIL WHILE REPEAT DO ?DO
-  LOOP +LOOP LEAVE EXIT RECURSE` (`?DO` compiles `(?do)` + a forward ZeroBranch
-  registered as a LEAVE SITE, so LOOP's existing leave-patching resolves the
-  skip target — no new mechanism)
-- Tools: `WORDS` (deduplicated, newest first) `SEE` (one-line for straight-line
-  bodies; indexed listing when body contains branches; `IMMEDIATE` suffix;
-  `exit` for MAX_VALUE branch; `NAME ( primitive )` for primitives)
+- Return stack: `>R R> R@ I J` (note: `R@` inside a DO-loop exposes the BIASED
+  slot, not the index — use `I`; see loop mechanics)
+- I/O: `. .R .S EMIT CR TYPE ." S"` — `."`/`S"` immediate and state-dependent;
+  `S"` copies into cell memory (one char per cell, PERMANENTLY allotted at
+  parse/compile time) and yields/compiles addr + len as two Literals; `.R` is
+  `( n width -- )` right-aligned, no trailing space; `.`/`.R`/`.S` format via
+  BASE, uppercase
+- `EVALUATE ( addr u -- )`
+- Comments: `( \` (immediate)
+- Compiler: `: ; IMMEDIATE CONSTANT VARIABLE DOES>` (`;`, `DOES>` immediate)
+- Memory: `@ ! +! HERE ALLOT CELLS , CREATE BASE` — CELLS is identity
+  (cell-addressed memory); VARIABLE allots 1 cell, word pushes its address;
+  CREATE pushes creation-time HERE, allots nothing; `,` stores + allots 1;
+  BASE pushes the reserved cell-0 address
+- Control flow (immediate): `IF ELSE THEN BEGIN UNTIL WHILE REPEAT DO ?DO LOOP
+  +LOOP LEAVE EXIT RECURSE`
+- Tools: `WORDS` (deduplicated, newest first), `SEE` (single line for
+  straight-line bodies, indexed listing when branches present, ` IMMEDIATE`
+  suffix, `exit` for the MAX_VALUE branch, `NAME ( primitive )` for primitives)
+
+Defined in Forth (`src/main/resources/fjorth.fs`; NOT in Primitives.java):
+`2DUP 2DROP NIP TUCK NEGATE ABS MIN MAX 1+ 1- 0< 0> <> TRUE FALSE ?DUP CELL+
+HEX DECIMAL OCTAL SPACE SPACES`
 
 ## Compile-time mechanics (for extending control flow)
 
-Backpatch positions travel on the DATA stack at compile time: IF/WHILE push the
-index of their placeholder ZeroBranch(-1); THEN/REPEAT pop and `resolve`; ELSE
-patches IF's and pushes its own Branch(-1) index; BEGIN pushes a destination
-index; UNTIL/REPEAT compile backward branches to it. DO pushes body-start index
-AND opens a leave scope in Definition; LOOP/+LOOP pop the index, compile
-runtime word + ZeroBranch back, then resolve all LEAVE sites to just past
-themselves. LEAVE compiles `(unloop)` + Branch(-1) and registers the site.
-Loop params live on the RETURN stack in BIASED form: `(do)`/`(?do)` push limit,
-then `slot = index - limit + Long.MIN_VALUE`. The ANS limit-1/limit boundary
-sits exactly at MAX_VALUE/MIN_VALUE, so `(loop)`/`(+loop)` terminate on signed
-overflow of `slot + increment` — exact even when the index wraps the 64-bit
-range. `I` = `slot + limit + MIN_VALUE` (offsets 0,1), `J` same at offsets 2,3.
-Consequence: `R@` does NOT alias `I` inside loops (it sees the biased slot);
-ANS leaves that interaction implementation-defined.
+Backpatch positions travel on the DATA stack at compile time: `IF`/`WHILE` push
+the index of their placeholder `ZeroBranch(-1)`; `THEN`/`REPEAT` pop and
+`resolve`; `ELSE` patches IF's and pushes its own `Branch(-1)` index; `BEGIN`
+pushes a destination; `UNTIL`/`REPEAT` compile backward branches to it.
 
-## Known limitations / deferred items
+`DO`/`?DO` push the body-start index AND open a leave scope; `LOOP`/`+LOOP`
+pop it, compile runtime word + `ZeroBranch` back, then resolve all LEAVE sites
+to just past themselves. `LEAVE` compiles `(unloop)` + `Branch(-1)` and
+registers the site. `?DO`'s skip is a `ZeroBranch(-1)` registered as a leave
+site — resolved by the same mechanism.
 
-- **`DOES>`** is implemented via compile-time split, NOT the classic runtime
-  code-field patch: `DOES>` (immediate) calls `Definition.beginTail()` — further
-  compilation goes to a separate tail list; `seal()` wraps the tail in its own
-  Colon and appends a `(does>)` primitive to the build body that, at run time,
-  redefines the LATEST dictionary word as (old behavior, then tail). Composition
-  is permissive — it wraps whatever the latest word is, CREATEd or not (ANS
-  says CREATEd-only; not enforced). One DOES> per definition (multiple → error);
-  DO..LOOP may not span the split (guarded); IF spanning the split is NOT
-  guarded (backpatch indices would cross lists — pathological, unguarded).
-- **`+LOOP`/`LOOP` termination is fully ANS-conformant** (biased-index overflow
-  representation, see "Compile-time mechanics"). `0 0 DO ... LOOP` iterates
-  ~2^64 times (ANS-correct; use `?DO` to guard). `R@` inside a loop exposes the
-  biased slot, not the index — use `I`.
-- No `AGAIN`, no `UNLOOP` user word (only internal `(unloop)`), no
-  `2SWAP/2OVER`. Strings are `."`/`S"`/`TYPE`/`EVALUATE` only — no `C@`/`C!`,
-  no counted strings, no `S+`/`COMPARE`; each interpreted `S"` permanently
-  allots its cells.
-- Numbers parse via `Long.parseLong(token, BASE)`: no `#`/`$`/`'c'` prefixes,
-  no double-cell numbers, dictionary lookup still shadows numbers (`BEEF` in HEX
-  is a number only if no word `BEEF` exists).
-- `Interpreter.evaluate(String)` is the reentrant entry point: saves/restores
-  `input`/`pos`/`tokenStart`, so `EVALUATE` nests arbitrarily. Error location
-  happens once, innermost-first: `ForthException.locate(line, position)` is a
-  no-op on an already-located exception, so errors inside evaluated text carry
-  THAT text's caret, not the outer line's.
-- `EXIT` inside DO..LOOP leaves loop params on the return stack (standard Forth
-  requires UNLOOP first; user's responsibility).
+Loop runtime (`(do)`/`(?do)`/`(loop)`/`(+loop)` in Primitives): parameters live
+on the RETURN stack in BIASED form — limit, then
+`slot = index - limit + Long.MIN_VALUE`. The ANS limit-1/limit boundary sits
+exactly at MAX_VALUE/MIN_VALUE, so `(loop)`/`(+loop)` terminate on signed
+overflow of `slot + increment` (`((slot ^ next) & (increment ^ next)) < 0`) —
+exact even when the index wraps the 64-bit range (fully ANS-conformant).
+`(loop)`/`(+loop)` push 0 (continue; consumed by the backward ZeroBranch) or
+-1 (exit; parameters dropped). `I` = `slot + limit + MIN_VALUE` (wrapping
+arithmetic undoes the bias; offsets 0,1), `J` same at offsets 2,3.
 
-## Tests (src/test/java/..., 141 total)
+`DOES>` is a compile-time split (NOT the classic runtime code-field patch):
+immediate, calls `Definition.beginTail()`; further compilation goes to the
+tail; `seal()` wraps the tail in an anonymous Colon and appends a `(does>)`
+primitive that at run time redefines the LATEST dictionary word as (old
+behavior — a CREATEd word pushes its data address — then tail), via
+dictionary shadowing. One DOES> per definition; DO..LOOP may not span the
+split (guarded); IF spanning the split is NOT guarded; retrofit is permissive
+about what the latest word is (ANS restricts to CREATEd; not enforced).
 
-- `MachineTest` — stacks, memory, bounds. Constructs Machine directly.
-- `DictionaryTest` — shadowing, case, persistence. Uses raw `new Word.Primitive`.
-- `InterpreterTest`, `CompilerTest`, `ControlFlowTest`, `MemoryTest`, `PolishTest`
-  — all use the pattern: fields `Machine`, `StringWriter output`,
-  `Interpreter interpreter = Bootstrap.interpreter(machine, new Stdout(output))`,
-  helper `long[] stackAfter(String line)`. Tests read as Forth transcripts.
-- Error-message assertions use `startsWith`/`contains` (messages carry a
-  line+caret context suffix since Phase 6). Two historical test failures were both
-  hand-traced stack-effect mistakes in expectations, never implementation bugs.
+## Known limitations
 
-## Conventions in force (from user's global CLAUDE.md)
+- No `AGAIN`, no user-level `UNLOOP`, no `2SWAP`/`2OVER`. Strings: no
+  `C@`/`C!`, no counted strings, no `COMPARE`; each interpreted `S"`
+  permanently allots cells.
+- Numbers: `Long.parseLong(token, BASE)` only — no `#`/`$`/`'c'` prefixes, no
+  double-cell. Dictionary lookup shadows numbers (`BEEF` in HEX is a number
+  only if no word `BEEF` exists).
+- `0 0 DO ... LOOP` iterates ~2^64 times (ANS-correct; guard with `?DO`).
+- `EXIT` inside DO..LOOP leaves loop params on the return stack (ANS requires
+  UNLOOP first; user's responsibility).
+- REPL failure path prints only the message; pending unflushed output from the
+  failed line can share its line (cosmetic).
 
-- Machine-like tone in all communication: no emojis, no colloquialisms, no
-  humor; acknowledge with "OK"; say "Inconclusive" with reasons when no clear
-  answer exists.
-- Code: spaces, 4-space indent; functional style preferred; immutable data
-  structures unless a critical loop demonstrably benefits; mutation is currently
-  confined to Machine, open Definition, and Interpreter's dictionary head +
-  tokenizer state.
-- Project style: blank line between field declarations; `interpreter ->` lambda
-  parameter naming in Primitives (`inner` for nested closures, `m` for local
-  Machine); tests use JUnit static-import assertions.
+## Tests (src/test/java/com/github/kjetilv/fjorth/, 141 total)
 
-## Natural next steps (none requested yet)
+`MachineTest`, `DictionaryTest` (construct core types directly);
+`InterpreterTest`, `CompilerTest`, `ControlFlowTest`, `MemoryTest`,
+`PolishTest`, `StringNumberTest`, `DoesTest`, `EvaluateTest` — all use the
+fixture: fields `Machine machine`, `StringWriter output`,
+`Interpreter interpreter = Bootstrap.interpreter(machine, Out.to(output))`,
+helper `long[] stackAfter(String line)`. Tests read as Forth transcripts.
+Error-message assertions use `startsWith`/`contains` because messages carry
+the line+caret suffix. Historical note: every implementation-side test failure
+in this project (3 total) was a wrong hand-traced expectation, never an
+implementation bug — prefer short single-step stack assertions.
 
-1. Command-line `.fs` file loading (the `repl.java` entry point ignores args).
+## Natural next steps (none requested)
+
+1. Command-line `.fs` file loading (`repl.java` ignores its args).
+2. Optional vocabulary: `AGAIN`, `UNLOOP`, `2SWAP`/`2OVER`, `C@`/`C!`,
+   `WITHIN`, `.(`.
+3. REPL polish: newline before error output when the failed line printed
+   something (cosmetic, see limitations).
