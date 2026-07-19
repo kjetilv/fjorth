@@ -27,7 +27,7 @@ tasks.test {
 }
 
 application {
-    mainClass = "com.github.kjetilv.fjorth.Repl"
+    mainClass = "repl"
 }
 
 tasks.named<JavaExec>("run") {

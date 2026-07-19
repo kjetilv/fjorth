@@ -22,7 +22,7 @@ final class Primitives {
             var index = m.pop();
             var limit = m.pop();
             m.pushReturn(limit);
-            m.pushReturn(index);
+            m.pushReturn(slot(index, limit));
         }
     );
 
@@ -46,7 +46,7 @@ final class Primitives {
                 m.push(0);
             } else {
                 m.pushReturn(limit);
-                m.pushReturn(index);
+                m.pushReturn(slot(index, limit));
                 m.push(-1);
             }
         }
@@ -367,13 +367,13 @@ final class Primitives {
             primitive(
                 "I", interpreter -> {
                     var m = interpreter.machine();
-                    m.push(m.peekReturn());
+                    m.push(index(m.peekReturn(), m.peekReturn(1)));
                 }
             ),
             primitive(
                 "J", interpreter -> {
                     var m = interpreter.machine();
-                    m.push(m.peekReturn(2));
+                    m.push(index(m.peekReturn(2), m.peekReturn(3)));
                 }
             ),
             primitive(
@@ -433,10 +433,9 @@ final class Primitives {
     }
 
     private static void loopStep(Machine m, long increment) {
-        var index = m.popReturn();
-        var limit = m.peekReturn();
-        var next = index + increment;
-        var crossed = index < limit != next < limit;
+        var slot = m.popReturn();
+        var next = slot + increment;
+        var crossed = ((slot ^ next) & (increment ^ next)) < 0;
         if (crossed) {
             m.popReturn();
             m.push(-1);
@@ -444,6 +443,18 @@ final class Primitives {
             m.pushReturn(next);
             m.push(0);
         }
+    }
+
+    // Loop counters live on the return stack biased: slot = index - limit + MIN_VALUE.
+    // The ANS limit-1/limit boundary then sits exactly at MAX_VALUE/MIN_VALUE, so
+    // "index crossed the boundary" == "slot + increment overflowed", correct even when
+    // the index itself wraps the 64-bit range. I/J reconstruct via index().
+    private static long slot(long index, long limit) {
+        return index - limit + Long.MIN_VALUE;
+    }
+
+    private static long index(long slot, long limit) {
+        return slot + limit + Long.MIN_VALUE;
     }
 
     private static void closeLoop(Interpreter interpreter, Word runtime) {

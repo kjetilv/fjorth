@@ -8,9 +8,16 @@ Snapshot for resuming work. State as of 2026-07-18. Companion documents:
 
 A Forth implementation in Java 25, built in 7 phases (0–6), all complete.
 Gradle project `fjorth`, group `com.github.kjetilv`, package `com.github.kjetilv.fjorth`.
-138 tests, all passing. Working REPL. Post-plan work so far: ANS boundary-crossing
-LOOP/+LOOP termination; BASE/HEX/DECIMAL, S", TYPE, .R; DOES>; EVALUATE; ?DO
-(see IMPLEMENTATION.md "Post-plan work").
+141 tests, all passing. Post-plan work so far: fully ANS-conformant LOOP/+LOOP
+(biased-index wraparound representation); BASE/HEX/DECIMAL, S", TYPE, .R; DOES>;
+EVALUATE; ?DO (see IMPLEMENTATION.md "Post-plan work"). Git is managed by the
+user; do not commit unless asked. The user refactors between sessions
+(Fjorth/Out/Stdout abstractions, FjorthException, `Result`-based eval), so
+verify file contents before editing rather than trusting inventories verbatim.
+Entry point: `src/main/java/repl.java`, a Java 25 compact source file
+(implicit class, instance main; JEP 512) — `mainClass = "repl"`, uses
+`Fjorth.getDefault()` and try-with-resources on `eval`'s `Result` so Failed
+auto-resets. `gradle run` works.
 
 ## Build and run
 
@@ -146,8 +153,13 @@ index; UNTIL/REPEAT compile backward branches to it. DO pushes body-start index
 AND opens a leave scope in Definition; LOOP/+LOOP pop the index, compile
 runtime word + ZeroBranch back, then resolve all LEAVE sites to just past
 themselves. LEAVE compiles `(unloop)` + Branch(-1) and registers the site.
-Loop params live on the RETURN stack: `(do)` pushes limit then index (index on
-top, so R@ = I; J = peekReturn(2)).
+Loop params live on the RETURN stack in BIASED form: `(do)`/`(?do)` push limit,
+then `slot = index - limit + Long.MIN_VALUE`. The ANS limit-1/limit boundary
+sits exactly at MAX_VALUE/MIN_VALUE, so `(loop)`/`(+loop)` terminate on signed
+overflow of `slot + increment` — exact even when the index wraps the 64-bit
+range. `I` = `slot + limit + MIN_VALUE` (offsets 0,1), `J` same at offsets 2,3.
+Consequence: `R@` does NOT alias `I` inside loops (it sees the biased slot);
+ANS leaves that interaction implementation-defined.
 
 ## Known limitations / deferred items
 
@@ -160,11 +172,10 @@ top, so R@ = I; J = peekReturn(2)).
   says CREATEd-only; not enforced). One DOES> per definition (multiple → error);
   DO..LOOP may not span the split (guarded); IF spanning the split is NOT
   guarded (backpatch indices would cross lists — pathological, unguarded).
-- **`+LOOP`/`LOOP` termination**: boundary-crossing test
-  `(index < limit) != (next < limit)` in `Primitives.loopStep` — ANS-correct
-  except at 64-bit wraparound (full conformance would need the biased-index
-  overflow trick, changing `I`/`J`/`R@` representation). Consequence:
-  `0 0 DO ... LOOP` iterates ~2^64 times (ANS-correct; use `?DO` to guard).
+- **`+LOOP`/`LOOP` termination is fully ANS-conformant** (biased-index overflow
+  representation, see "Compile-time mechanics"). `0 0 DO ... LOOP` iterates
+  ~2^64 times (ANS-correct; use `?DO` to guard). `R@` inside a loop exposes the
+  biased slot, not the index — use `I`.
 - No `AGAIN`, no `UNLOOP` user word (only internal `(unloop)`), no
   `2SWAP/2OVER`. Strings are `."`/`S"`/`TYPE`/`EVALUATE` only — no `C@`/`C!`,
   no counted strings, no `S+`/`COMPARE`; each interpreted `S"` permanently
@@ -180,7 +191,7 @@ top, so R@ = I; J = peekReturn(2)).
 - `EXIT` inside DO..LOOP leaves loop params on the return stack (standard Forth
   requires UNLOOP first; user's responsibility).
 
-## Tests (src/test/java/..., 138 total)
+## Tests (src/test/java/..., 141 total)
 
 - `MachineTest` — stacks, memory, bounds. Constructs Machine directly.
 - `DictionaryTest` — shadowing, case, persistence. Uses raw `new Word.Primitive`.
@@ -207,7 +218,4 @@ top, so R@ = I; J = peekReturn(2)).
 
 ## Natural next steps (none requested yet)
 
-1. Load `.fs` files from the command line (`Repl.main` args are ignored).
-2. Full ANS wraparound conformance for LOOP/+LOOP via the biased-index
-   overflow representation (changes `I`/`J`/`R@`; only needed if strict
-   conformance becomes a goal).
+1. Command-line `.fs` file loading (the `repl.java` entry point ignores args).

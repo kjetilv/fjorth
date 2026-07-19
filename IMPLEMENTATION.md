@@ -310,6 +310,27 @@ just past themselves, so the skip branch resolves for free — no new compile
 structure, and `LEAVE` inside `?DO` works unchanged. The skip path never
 touches the return stack, which the tests assert.
 
+### Full ANS LOOP/+LOOP wraparound conformance (2026-07-19)
+
+The boundary-side termination test was replaced with the biased-index
+representation, closing the last conformance gap. `(do)`/`(?do)` now store
+`slot = index - limit + Long.MIN_VALUE` on the return stack; the ANS
+limit-1/limit boundary maps exactly to MAX_VALUE/MIN_VALUE, so `(loop)`/
+`(+loop)` terminate on signed overflow of `slot + increment`
+(`((slot ^ next) & (increment ^ next)) < 0`) — correct even when the index
+wraps the 64-bit range. `loopStep` no longer needs the limit at all. `I` and
+`J` reconstruct the real index (`slot + limit + MIN_VALUE`, wrapping arithmetic
+undoing the bias). The known cost, accepted when this trade was chosen: `R@`
+no longer aliases `I` inside loops — it exposes the biased slot. ANS leaves
+that interaction implementation-defined, and real Forths using this technique
+share the property.
+
+New tests: a loop whose index walks MAX → MIN across the wrap boundary
+(4 iterations, counted), `I` values straddling the boundary, and `I`/`J`
+reconstruction in nested loops. Verification was suite-only: the user's
+concurrent refactor (Fjorth/Out/Stdout, FjorthException; `Repl` removed)
+left no application entry point, so no REPL check was possible.
+
 ## Cross-phase observations
 
 - **Phase discipline held where it mattered and bent where reality required.** The

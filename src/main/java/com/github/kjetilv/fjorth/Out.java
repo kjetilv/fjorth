@@ -14,6 +14,10 @@ public interface Out {
 
     default void println(String s) {
         print(s);
+        println();
+    }
+
+    default void println() {
         print("\n");
         flush();
     }

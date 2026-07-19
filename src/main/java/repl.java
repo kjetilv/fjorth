@@ -11,7 +11,10 @@ void main() {
             try (var result = fjorth.eval(line)) {
                 switch (result) {
                     case Fjorth.Result.OK _ -> out.println(" ok");
-                    case Fjorth.Result.Failed failed -> out.println(failed.message());
+                    case Fjorth.Result.Failed failed -> {
+                        out.println();
+                        out.println(failed.message());
+                    }
                 }
             }
         }

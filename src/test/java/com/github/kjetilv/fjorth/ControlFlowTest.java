@@ -85,6 +85,29 @@ class ControlFlowTest {
     }
 
     @Test
+    void loopIndexMayWrapTheSignedRange() {
+        interpreter.interpret(": WRAP 0 -9223372036854775806 9223372036854775806 DO 1 + LOOP ;");
+        assertArrayEquals(new long[] {4}, stackAfter("WRAP"));
+        assertEquals(0, machine.returnDepth());
+    }
+
+    @Test
+    void iIsCorrectAcrossTheWrapBoundary() {
+        interpreter.interpret(": EDGES -9223372036854775807 9223372036854775806 DO I LOOP ;");
+        assertArrayEquals(
+            new long[] {9223372036854775806L, 9223372036854775807L, -9223372036854775808L},
+            stackAfter("EDGES")
+        );
+        assertEquals(0, machine.returnDepth());
+    }
+
+    @Test
+    void iAndJReconstructIndicesInNestedLoops() {
+        interpreter.interpret(": PAIRS 12 10 DO 2 0 DO J I LOOP LOOP ;");
+        assertArrayEquals(new long[] {10, 0, 10, 1, 11, 0, 11, 1}, stackAfter("PAIRS"));
+    }
+
+    @Test
     void questionDoSkipsWhenLimitEqualsIndex() {
         interpreter.interpret(": NONE 0 0 ?DO I LOOP ;");
         assertArrayEquals(new long[] {}, stackAfter("NONE"));
