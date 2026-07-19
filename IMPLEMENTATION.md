@@ -331,6 +331,17 @@ reconstruction in nested loops. Verification was suite-only: the user's
 concurrent refactor (Fjorth/Out/Stdout, FjorthException; `Repl` removed)
 left no application entry point, so no REPL check was possible.
 
+### Command-line file loading and REPL polish (2026-07-19, user-implemented)
+
+The user extended the `repl.java` entry point (itself part of the user's
+Fjorth/Out/Stdout refactor — a Java 25 compact source file with an instance
+`main`): args are `.fs` file paths evaluated line by line before the
+interactive loop, with startup aborting on the first failing line
+(`<file>:<line-no> >> <line>`); and the REPL failure path now prints a newline
+before the error message so output flushed by the failing line does not share
+its line. Verified with a piped session loading a definitions file and
+recovering from a mid-line error.
+
 ## Cross-phase observations
 
 - **Phase discipline held where it mattered and bent where reality required.** The

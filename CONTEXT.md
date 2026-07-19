@@ -64,10 +64,18 @@ printf '1 2 + .\n' | JAVA_HOME=~/.sdkman/candidates/java/current ./gradlew -q ru
 ### Entry point
 
 `src/main/java/repl.java` — a compact source file (implicit class, instance
-`main()`, unnamed package). `build.gradle.kts` has `mainClass = "repl"` and
-wires stdin into the `run` task. It uses `Fjorth.getDefault()` and
-try-with-resources over `eval`'s Result. Its `args` are currently ignored
-(candidate: `.fs` file loading).
+`main(String[] args)`, unnamed package). `build.gradle.kts` has
+`mainClass = "repl"` and wires stdin into the `run` task. Uses
+`Fjorth.getDefault()` and try-with-resources over `eval`'s Result (Failed
+auto-resets via its closer). Behavior (user-implemented):
+
+- Each arg is a `.fs` file path, announced (`*** evaluating file <arg>`) and
+  evaluated line by line BEFORE the interactive loop; the first failing line
+  aborts startup with `IllegalStateException` naming `<file>:<line-no> >>
+  <line>`. Try it: `./gradlew -q run --console=plain --args="/tmp/lib.fs"`.
+- The failure path prints a newline before the error message, so output
+  flushed by the failing line does not share its line.
+- Note: file lines echo ` ok` like interactive lines do.
 
 ### Core (package-private, in com.github.kjetilv.fjorth)
 
@@ -212,8 +220,6 @@ about what the latest word is (ANS restricts to CREATEd; not enforced).
 - `0 0 DO ... LOOP` iterates ~2^64 times (ANS-correct; guard with `?DO`).
 - `EXIT` inside DO..LOOP leaves loop params on the return stack (ANS requires
   UNLOOP first; user's responsibility).
-- REPL failure path prints only the message; pending unflushed output from the
-  failed line can share its line (cosmetic).
 
 ## Tests (src/test/java/com/github/kjetilv/fjorth/, 141 total)
 
@@ -230,8 +236,7 @@ implementation bug — prefer short single-step stack assertions.
 
 ## Natural next steps (none requested)
 
-1. Command-line `.fs` file loading (`repl.java` ignores its args).
-2. Optional vocabulary: `AGAIN`, `UNLOOP`, `2SWAP`/`2OVER`, `C@`/`C!`,
+1. Optional vocabulary: `AGAIN`, `UNLOOP`, `2SWAP`/`2OVER`, `C@`/`C!`,
    `WITHIN`, `.(`.
-3. REPL polish: newline before error output when the failed line printed
-   something (cosmetic, see limitations).
+2. Optional: suppress the per-line ` ok` echo while evaluating `.fs` files
+   passed as args (currently they echo like interactive lines).

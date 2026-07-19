@@ -8,17 +8,18 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 void main(String[] args) {
-    out.println("fjorth");
     Arrays.stream(args)
-        .peek(arg -> out.println("Evaluating " + arg))
+        .peek(arg -> out.println("*** evaluating file " + arg))
         .map(Path::of)
         .forEach(file ->
             evaluateLines(file, () -> reader(file))
                 .ifPresent(failingLine -> {
                     throw new IllegalStateException("Failed to evaluate " + file + ", failing line: " + failingLine);
                 }));
+    out.println("fjorth");
     try (var in = stdin()) {
         in.lines()
             .forEach(this::evaluate);
@@ -27,12 +28,24 @@ void main(String[] args) {
     }
 }
 
-private Optional<String> evaluateLines(Object source, Supplier<BufferedReader> bufferedReader) {
+/// @param source         Source of lines
+/// @param readerSupplier Supplier of reader
+/// @return Error messgae for first line that failed, empty if all succeeded
+private Optional<String> evaluateLines(Object source, Supplier<BufferedReader> readerSupplier) {
     try (
-        var in = bufferedReader.get()
+        var in = readerSupplier.get()
     ) {
+        int[] ln = {1};
         return in.lines()
-            .takeWhile(this::evaluate)
+            .flatMap(line -> {
+                try {
+                    return evaluate(line)
+                        ? Stream.empty()
+                        : Stream.of(source + ":" + ln[0] + " >> " + line);
+                } finally {
+                    ln[0]++;
+                }
+            })
             .findFirst();
     } catch (Exception e) {
         throw new IllegalStateException("Failed to read from " + source, e);
