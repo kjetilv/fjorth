@@ -16,11 +16,12 @@ public final class FjorthException extends RuntimeException {
     }
 
     FjorthException locate(String line, int position) {
-        return located
-            ? this
-            : new FjorthException(
-                getMessage() + "\n" + line + "\n" + " ".repeat(position) + "^",
-                true
-            );
+        if (located) {
+            return this;
+        }
+        var fjorthException =
+            new FjorthException(getMessage() + "\n" + line + "\n" + " ".repeat(position) + "^", true);
+        fjorthException.setStackTrace(this.getStackTrace());
+        return fjorthException;
     }
 }

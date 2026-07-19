@@ -8,6 +8,10 @@ public interface Out {
         return new Stdout();
     }
 
+    static Out to(PrintWriter output) {
+        return new Stdout(output);
+    }
+
     static Out to(StringWriter output) {
         return new Stdout(output);
     }

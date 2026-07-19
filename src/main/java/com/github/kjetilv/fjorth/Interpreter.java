@@ -162,17 +162,33 @@ final class Interpreter implements Fjorth {
 
     private void run(Word.Colon colon) {
         var body = colon.body();
-        var ip = 0;
-        while (ip < body.size()) {
-            ip = switch (body.get(ip)) {
+        var instructionPointer = 0;
+        while (instructionPointer < body.size()) {
+            instructionPointer = switch (body.get(instructionPointer)) {
                 case Word.Branch(var target) -> target;
-                case Word.ZeroBranch(var target) -> machine.pop() == 0 ? target : ip + 1;
+                case Word.ZeroBranch(var target) -> machine.pop() == 0 ? target : instructionPointer + 1;
                 case Word word -> {
                     execute(word);
-                    yield ip + 1;
+                    yield instructionPointer + 1;
                 }
             };
         }
+    }
+
+    private void tokenLoop() {
+        tokens().forEach(token -> {
+            try {
+                handle(token);
+            } catch (FjorthException e) {
+                throw e.locate(input, tokenStart);
+            }
+        });
+    }
+
+    private Stream<String> tokens() {
+        return Stream.generate(this::nextToken)
+            .takeWhile(Optional::isPresent)
+            .flatMap(Optional::stream);
     }
 
     private void handle(String token) {
@@ -191,16 +207,6 @@ final class Interpreter implements Fjorth {
             } else {
                 machine.push(value);
             }
-        }
-    }
-
-    private void tokenLoop() {
-        try {
-            for (var token = nextToken(); token.isPresent(); token = nextToken()) {
-                handle(token.get());
-            }
-        } catch (FjorthException e) {
-            throw e.locate(input, tokenStart);
         }
     }
 

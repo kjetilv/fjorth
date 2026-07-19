@@ -11,13 +11,7 @@ class ControlFlowTest {
 
     private final StringWriter output = new StringWriter();
 
-    private final Interpreter interpreter =
-        Bootstrap.interpreter(machine, Out.to(output));
-
-    private long[] stackAfter(String line) {
-        interpreter.interpret(line);
-        return machine.stack();
-    }
+    private final Interpreter interpreter = Bootstrap.interpreter(machine, Out.to(output));
 
     @Test
     void ifElseThen() {
@@ -199,5 +193,10 @@ class ControlFlowTest {
     @Test
     void controlFlowOutsideDefinitionFails() {
         assertThrows(FjorthException.class, () -> interpreter.interpret("1 IF 2 THEN"));
+    }
+
+    private long[] stackAfter(String line) {
+        interpreter.interpret(line);
+        return machine.stack();
     }
 }
