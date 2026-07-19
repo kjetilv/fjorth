@@ -8,9 +8,9 @@ Snapshot for resuming work. State as of 2026-07-18. Companion documents:
 
 A Forth implementation in Java 25, built in 7 phases (0–6), all complete.
 Gradle project `fjorth`, group `com.github.kjetilv`, package `com.github.kjetilv.fjorth`.
-134 tests, all passing. Working REPL. Post-plan work so far: ANS boundary-crossing
-LOOP/+LOOP termination; BASE/HEX/DECIMAL, S", TYPE, .R; DOES>; EVALUATE (see
-IMPLEMENTATION.md "Post-plan work").
+138 tests, all passing. Working REPL. Post-plan work so far: ANS boundary-crossing
+LOOP/+LOOP termination; BASE/HEX/DECIMAL, S", TYPE, .R; DOES>; EVALUATE; ?DO
+(see IMPLEMENTATION.md "Post-plan work").
 
 ## Build and run
 
@@ -135,8 +135,10 @@ been committed. User has not asked for commits.
   to 10, so `here` starts at 1; `Machine.base()` validates 2–36 and is used by
   number parsing (`Interpreter.number` → `Long.parseLong(token, base)`) and
   output formatting (`Primitives.formatted`))
-- Control flow (all immediate): `IF ELSE THEN BEGIN UNTIL WHILE REPEAT DO LOOP
-  +LOOP LEAVE EXIT RECURSE`
+- Control flow (all immediate): `IF ELSE THEN BEGIN UNTIL WHILE REPEAT DO ?DO
+  LOOP +LOOP LEAVE EXIT RECURSE` (`?DO` compiles `(?do)` + a forward ZeroBranch
+  registered as a LEAVE SITE, so LOOP's existing leave-patching resolves the
+  skip target — no new mechanism)
 - Tools: `WORDS` (deduplicated, newest first) `SEE` (one-line for straight-line
   bodies; indexed listing when body contains branches; `IMMEDIATE` suffix;
   `exit` for MAX_VALUE branch; `NAME ( primitive )` for primitives)
@@ -168,7 +170,7 @@ top, so R@ = I; J = peekReturn(2)).
   `(index < limit) != (next < limit)` in `Primitives.loopStep` — ANS-correct
   except at 64-bit wraparound (full conformance would need the biased-index
   overflow trick, changing `I`/`J`/`R@` representation). Consequence:
-  `0 0 DO ... LOOP` iterates ~2^64 times (ANS-correct; there is no `?DO`).
+  `0 0 DO ... LOOP` iterates ~2^64 times (ANS-correct; use `?DO` to guard).
 - No `AGAIN`, no `UNLOOP` user word (only internal `(unloop)`), no
   `2SWAP/2OVER`. Strings are `."`/`S"`/`TYPE`/`EVALUATE` only — no `C@`/`C!`,
   no counted strings, no `S+`/`COMPARE`; each interpreted `S"` permanently
@@ -184,7 +186,7 @@ top, so R@ = I; J = peekReturn(2)).
 - `EXIT` inside DO..LOOP leaves loop params on the return stack (standard Forth
   requires UNLOOP first; user's responsibility).
 
-## Tests (src/test/java/..., 134 total)
+## Tests (src/test/java/..., 138 total)
 
 - `MachineTest` — stacks, memory, bounds. Constructs Machine directly.
 - `DictionaryTest` — shadowing, case, persistence. Uses raw `new Word.Primitive`.
@@ -211,8 +213,7 @@ top, so R@ = I; J = peekReturn(2)).
 
 ## Natural next steps (none requested yet)
 
-1. Initial git commit (user has not asked; everything is uncommitted).
-2. Load `.fs` files from the command line (`Repl.main` args are ignored).
-3. `?DO` (skip loop body when limit equals index — the usual guard now that
-   `0 0 DO` loops ~2^64 times), or full wraparound conformance via the
-   biased-index overflow representation.
+1. Load `.fs` files from the command line (`Repl.main` args are ignored).
+2. Full ANS wraparound conformance for LOOP/+LOOP via the biased-index
+   overflow representation (changes `I`/`J`/`R@`; only needed if strict
+   conformance becomes a goal).

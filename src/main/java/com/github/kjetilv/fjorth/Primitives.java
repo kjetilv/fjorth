@@ -36,6 +36,21 @@ public final class Primitives {
         }
     );
 
+    private static final Word QDO_RUNTIME = primitive(
+        "(?do)", interpreter -> {
+            Machine m = interpreter.machine();
+            long index = m.pop();
+            long limit = m.pop();
+            if (limit == index) {
+                m.push(0);
+            } else {
+                m.pushReturn(limit);
+                m.pushReturn(index);
+                m.push(-1);
+            }
+        }
+    );
+
     private static final Word UNLOOP_RUNTIME = primitive(
         "(unloop)", interpreter -> {
             Machine m = interpreter.machine();
@@ -317,6 +332,17 @@ public final class Primitives {
                     interpreter.append(DO_RUNTIME);
                     interpreter.open().beginLoop();
                     interpreter.machine().push(interpreter.open().size());
+                }
+            ),
+            immediate(
+                "?DO", interpreter -> {
+                    interpreter.append(QDO_RUNTIME);
+                    Definition open = interpreter.open();
+                    open.beginLoop();
+                    int skip = open.size();
+                    interpreter.append(Word.zeroBranch(-1));
+                    open.addLeave(skip);
+                    interpreter.machine().push(open.size());
                 }
             ),
             immediate("LOOP", interpreter -> closeLoop(interpreter, LOOP_RUNTIME)),

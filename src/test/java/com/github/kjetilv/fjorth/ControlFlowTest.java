@@ -90,6 +90,33 @@ class ControlFlowTest {
     }
 
     @Test
+    void questionDoSkipsWhenLimitEqualsIndex() {
+        interpreter.interpret(": NONE 0 0 ?DO I LOOP ;");
+        assertArrayEquals(new long[] {}, stackAfter("NONE"));
+        assertEquals(0, machine.returnDepth());
+    }
+
+    @Test
+    void questionDoLoopsWhenLimitsDiffer() {
+        interpreter.interpret(": SUM 0 5 0 ?DO I + LOOP ;");
+        assertArrayEquals(new long[] {10}, stackAfter("SUM"));
+        assertEquals(0, machine.returnDepth());
+    }
+
+    @Test
+    void questionDoWithPlusLoopSkips() {
+        interpreter.interpret(": NONE 10 10 ?DO I 2 +LOOP ;");
+        assertArrayEquals(new long[] {}, stackAfter("NONE"));
+    }
+
+    @Test
+    void leaveWorksInsideQuestionDo() {
+        interpreter.interpret(": FIRST-THREE 10 0 ?DO I I 2 = IF LEAVE THEN LOOP ;");
+        assertArrayEquals(new long[] {0, 1, 2}, stackAfter("FIRST-THREE"));
+        assertEquals(0, machine.returnDepth());
+    }
+
+    @Test
     void leaveExitsLoopAndCleansUp() {
         interpreter.interpret(": FIRST-FEW 10 0 DO I DUP 3 = IF LEAVE THEN LOOP ;");
         assertArrayEquals(new long[] {0, 1, 2, 3}, stackAfter("FIRST-FEW"));

@@ -2,7 +2,7 @@
 
 Companion to [PLAN.md](PLAN.md). One section per phase: what was executed, what was
 learned, and where and why the implementation deviated from the plan. All phases are
-complete; post-plan work is logged at the end. The suite stands at 134 tests.
+complete; post-plan work is logged at the end. The suite stands at 138 tests.
 
 ## Phase 0 — Project scaffolding
 
@@ -295,6 +295,20 @@ open does NOT close it, because EVALUATE is not immediate and gets compiled
 into the open definition. That is faithful ANS behavior, not a bug; the test
 was rewritten to assert what it actually meant (STATE set inside an evaluation
 persists after it).
+
+### ?DO (2026-07-19)
+
+`?DO ( limit index -- )` — like `DO`, but executes the body zero times when
+limit equals index. Needed since the ANS-correct termination rule made
+`0 0 DO ... LOOP` iterate ~2^64 times.
+
+Implementation reused existing machinery entirely: `?DO` compiles a `(?do)`
+runtime word (equal → push 0 and do NOT set up loop parameters; different →
+set up parameters and push -1) followed by a forward `ZeroBranch` that is
+registered as a **leave site**. `LOOP`/`+LOOP` already patch all leave sites to
+just past themselves, so the skip branch resolves for free — no new compile
+structure, and `LEAVE` inside `?DO` works unchanged. The skip path never
+touches the return stack, which the tests assert.
 
 ## Cross-phase observations
 
