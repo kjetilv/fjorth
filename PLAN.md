@@ -82,7 +82,7 @@ Backpatching mutates the body under construction only — once `;` seals the def
 ## Phase 5 — Memory model
 
 1. `HERE`, `ALLOT`, `+!`, `CELLS` words. (The `long[]` cell memory on `Machine`, plus `@` and `!`, landed with Phase 3 — `VARIABLE` required real addresses to be usable.)
-2. `CREATE` and `,` (comma). `DOES>` deferred: it requires runtime access to the enclosing colon body and instruction pointer, which the executor does not expose.
+2. `CREATE` and `,` (comma). `DOES>` was deferred here (it seemed to require runtime access to the executing colon body) and later implemented post-plan via a compile-time split instead — see IMPLEMENTATION.md.
 
 **Tests:** variable read/write, `ALLOT`-based arrays.
 

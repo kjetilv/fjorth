@@ -11,6 +11,8 @@ final class Definition {
 
     private final List<Word> body = new ArrayList<>();
 
+    private List<Word> tail;
+
     private final Deque<List<Integer>> loops = new ArrayDeque<>();
 
     private final Word[] self = new Word[1];
@@ -20,21 +22,32 @@ final class Definition {
     }
 
     void append(Word word) {
-        body.add(word);
+        active().add(word);
     }
 
     int size() {
-        return body.size();
+        return active().size();
     }
 
     void resolve(int index, int target) {
-        body.set(
-            index, switch (body.get(index)) {
+        List<Word> active = active();
+        active.set(
+            index, switch (active.get(index)) {
                 case Word.Branch _ -> Word.branch(target);
                 case Word.ZeroBranch _ -> new Word.ZeroBranch(target);
                 case Word word -> throw new ForthException("not a branch: " + word.name());
             }
         );
+    }
+
+    void beginTail() {
+        if (tail != null) {
+            throw new ForthException("multiple DOES> in " + name);
+        }
+        if (!loops.isEmpty()) {
+            throw new ForthException("unterminated DO before DOES> in " + name);
+        }
+        tail = new ArrayList<>();
     }
 
     void beginLoop() {
@@ -65,12 +78,35 @@ final class Definition {
         if (!loops.isEmpty()) {
             throw new ForthException("unterminated DO in " + name);
         }
-        if (body.stream().anyMatch(Definition::unresolved)) {
+        if (body.stream().anyMatch(Definition::unresolved)
+            || tail != null && tail.stream().anyMatch(Definition::unresolved)) {
             throw new ForthException("unresolved branch in " + name);
+        }
+        if (tail != null) {
+            body.add(retrofit(Word.colon("(does> " + name + ")", false, tail)));
         }
         Word.Colon colon = Word.colon(name, false, body);
         self[0] = colon;
         return colon;
+    }
+
+    private List<Word> active() {
+        return tail != null ? tail : body;
+    }
+
+    private static Word retrofit(Word.Colon tailColon) {
+        return Word.primitive(
+            "(does>)", interpreter -> {
+                Word latest = interpreter.dictionary().latest()
+                    .orElseThrow(() -> new ForthException("DOES>: empty dictionary"));
+                interpreter.define(Word.primitive(
+                    latest.name(), inner -> {
+                        inner.execute(latest);
+                        inner.execute(tailColon);
+                    }
+                ));
+            }
+        );
     }
 
     private static boolean unresolved(Word word) {

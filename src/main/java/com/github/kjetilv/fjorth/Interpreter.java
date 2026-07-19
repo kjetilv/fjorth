@@ -38,13 +38,24 @@ public final class Interpreter {
         input = line;
         pos = 0;
         try {
-            for (Optional<String> token = nextToken(); token.isPresent(); token = nextToken()) {
-                handle(token.get());
-            }
-        } catch (ForthException e) {
-            throw contextualized(e);
+            tokenLoop();
         } finally {
             out.flush();
+        }
+    }
+
+    public void evaluate(String text) {
+        String savedInput = input;
+        int savedPos = pos;
+        int savedTokenStart = tokenStart;
+        input = text;
+        pos = 0;
+        try {
+            tokenLoop();
+        } finally {
+            input = savedInput;
+            pos = savedPos;
+            tokenStart = savedTokenStart;
         }
     }
 
@@ -167,10 +178,14 @@ public final class Interpreter {
         }
     }
 
-    private ForthException contextualized(ForthException e) {
-        return new ForthException(
-            e.getMessage() + "\n" + input + "\n" + " ".repeat(tokenStart) + "^"
-        );
+    private void tokenLoop() {
+        try {
+            for (Optional<String> token = nextToken(); token.isPresent(); token = nextToken()) {
+                handle(token.get());
+            }
+        } catch (ForthException e) {
+            throw e.locate(input, tokenStart);
+        }
     }
 
     private Optional<String> nextToken() {

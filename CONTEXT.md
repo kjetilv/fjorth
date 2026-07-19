@@ -8,9 +8,9 @@ Snapshot for resuming work. State as of 2026-07-18. Companion documents:
 
 A Forth implementation in Java 25, built in 7 phases (0–6), all complete.
 Gradle project `fjorth`, group `com.github.kjetilv`, package `com.github.kjetilv.fjorth`.
-115 tests, all passing. Working REPL. Post-plan work so far: ANS boundary-crossing
-LOOP/+LOOP termination; BASE/HEX/DECIMAL, S", TYPE, .R (see IMPLEMENTATION.md
-"Post-plan work").
+134 tests, all passing. Working REPL. Post-plan work so far: ANS boundary-crossing
+LOOP/+LOOP termination; BASE/HEX/DECIMAL, S", TYPE, .R; DOES>; EVALUATE (see
+IMPLEMENTATION.md "Post-plan work").
 
 ## Build and run
 
@@ -56,8 +56,10 @@ been committed. User has not asked for commits.
   `Stream<Word>` newest-first (used by WORDS). Shadowing works because compiled
   bodies hold direct Word references.
 - **`Definition.java`** (package-private) — the open colon definition during
-  compilation. Mutable `ArrayList<Word> body`; `append`, `size`, `resolve(index,
-  target)` (re-creates the branch record at index, preserving its kind);
+  compilation. Mutable `ArrayList<Word> body` plus a nullable `tail` list opened
+  by `beginTail()` (DOES>); `append`/`size`/`resolve` operate on the ACTIVE list
+  (tail once open, body before); `resolve(index, target)` re-creates the branch
+  record at index, preserving its kind;
   `beginLoop()`/`addLeave(index)`/`endLoop()` — a `Deque<List<Integer>>` of LEAVE
   sites per DO-nesting level; `recurse()` returns a primitive closing over a
   one-element `Word[] self` that `seal()` fills with the finished Colon;
@@ -123,7 +125,9 @@ been committed. User has not asked for commits.
   PERMANENTLY allotted at parse/compile time — and yields/compiles addr + len as
   two Literals; `TYPE` is `( addr u -- )`; `.R` is `( n width -- )` right-aligned,
   no trailing space; `.`/`.R`/`.S` format via BASE, uppercase)
-- Compiler: `: ; IMMEDIATE CONSTANT VARIABLE` (`;` immediate)
+- `EVALUATE` `( addr u -- )` — reads the cell string (shares `poppedString` with
+  TYPE) and feeds it to `Interpreter.evaluate`
+- Compiler: `: ; IMMEDIATE CONSTANT VARIABLE DOES>` (`;` and `DOES>` immediate)
 - Memory: `@ ! +! HERE ALLOT CELLS , CREATE BASE` (CELLS is identity —
   cell-addressed memory; VARIABLE allots 1 cell and pushes address; CREATE pushes
   HERE at creation, allots nothing; `,` stores + allots 1; BASE pushes the
@@ -151,26 +155,36 @@ top, so R@ = I; J = peekReturn(2)).
 
 ## Known limitations / deferred items
 
-- **`DOES>` not implemented.** Blocker: its runtime must capture "rest of the
-  currently executing colon body"; `run()`'s ip is a local variable invisible to
-  primitives. Needs an exposed execution frame. Recorded in PLAN.md Phase 5.
+- **`DOES>`** is implemented via compile-time split, NOT the classic runtime
+  code-field patch: `DOES>` (immediate) calls `Definition.beginTail()` — further
+  compilation goes to a separate tail list; `seal()` wraps the tail in its own
+  Colon and appends a `(does>)` primitive to the build body that, at run time,
+  redefines the LATEST dictionary word as (old behavior, then tail). Composition
+  is permissive — it wraps whatever the latest word is, CREATEd or not (ANS
+  says CREATEd-only; not enforced). One DOES> per definition (multiple → error);
+  DO..LOOP may not span the split (guarded); IF spanning the split is NOT
+  guarded (backpatch indices would cross lists — pathological, unguarded).
 - **`+LOOP`/`LOOP` termination**: boundary-crossing test
   `(index < limit) != (next < limit)` in `Primitives.loopStep` — ANS-correct
   except at 64-bit wraparound (full conformance would need the biased-index
   overflow trick, changing `I`/`J`/`R@` representation). Consequence:
   `0 0 DO ... LOOP` iterates ~2^64 times (ANS-correct; there is no `?DO`).
-- No `EVALUATE`, no `AGAIN`, no `UNLOOP` user word (only internal `(unloop)`),
-  no `2SWAP/2OVER`. Strings are `."`/`S"`/`TYPE` only — no `C@`/`C!`, no counted
-  strings, no `S+`/`COMPARE`; each interpreted `S"` permanently allots its cells.
+- No `AGAIN`, no `UNLOOP` user word (only internal `(unloop)`), no
+  `2SWAP/2OVER`. Strings are `."`/`S"`/`TYPE`/`EVALUATE` only — no `C@`/`C!`,
+  no counted strings, no `S+`/`COMPARE`; each interpreted `S"` permanently
+  allots its cells.
 - Numbers parse via `Long.parseLong(token, BASE)`: no `#`/`$`/`'c'` prefixes,
   no double-cell numbers, dictionary lookup still shadows numbers (`BEEF` in HEX
   is a number only if no word `BEEF` exists).
-- `interpret()` is not reentrant (single `input`/`pos`) — matters if EVALUATE is
-  ever added.
+- `Interpreter.evaluate(String)` is the reentrant entry point: saves/restores
+  `input`/`pos`/`tokenStart`, so `EVALUATE` nests arbitrarily. Error location
+  happens once, innermost-first: `ForthException.locate(line, position)` is a
+  no-op on an already-located exception, so errors inside evaluated text carry
+  THAT text's caret, not the outer line's.
 - `EXIT` inside DO..LOOP leaves loop params on the return stack (standard Forth
   requires UNLOOP first; user's responsibility).
 
-## Tests (src/test/java/..., 115 total)
+## Tests (src/test/java/..., 134 total)
 
 - `MachineTest` — stacks, memory, bounds. Constructs Machine directly.
 - `DictionaryTest` — shadowing, case, persistence. Uses raw `new Word.Primitive`.
@@ -198,11 +212,7 @@ top, so R@ = I; J = peekReturn(2)).
 ## Natural next steps (none requested yet)
 
 1. Initial git commit (user has not asked; everything is uncommitted).
-2. `DOES>` via an execution-frame refactor of `run()` — or the compile-time
-   split approach (immediate `DOES>` seals the build-time half and collects the
-   tail; see discussion 2026-07-19).
-3. `EVALUATE` (requires reentrant tokenizer state — save/restore `input`/`pos`).
-4. Load `.fs` files from the command line (`Repl.main` args are ignored).
-5. `?DO` (skip loop body when limit equals index — the usual guard now that
+2. Load `.fs` files from the command line (`Repl.main` args are ignored).
+3. `?DO` (skip loop body when limit equals index — the usual guard now that
    `0 0 DO` loops ~2^64 times), or full wraparound conformance via the
    biased-index overflow representation.

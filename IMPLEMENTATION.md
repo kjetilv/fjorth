@@ -2,7 +2,7 @@
 
 Companion to [PLAN.md](PLAN.md). One section per phase: what was executed, what was
 learned, and where and why the implementation deviated from the plan. All phases are
-complete; post-plan work is logged at the end. The suite stands at 115 tests.
+complete; post-plan work is logged at the end. The suite stands at 134 tests.
 
 ## Phase 0 — Project scaffolding
 
@@ -243,6 +243,58 @@ is not implemented).
 - Learnings: compiled literals are immune to later `BASE` changes (values, not
   text — a test pins this); reserving cell 0 broke one `Machine` test that
   assumed all memory cells were free, the only fallout.
+
+### DOES> (2026-07-19)
+
+Implemented via **compile-time split**, avoiding the execution-frame refactor
+that caused its Phase 5 deferral. The classic implementation patches the created
+word's code field at run time, which requires the running `(does>)` to capture
+"the rest of the currently executing body" — impossible here because `run()`'s
+instruction pointer is a local. The split makes the problem disappear:
+
+- `DOES>` is immediate; it calls `Definition.beginTail()`, redirecting all
+  further compilation (including branch backpatching — `append`/`size`/`resolve`
+  now operate on the active list) into a separate tail list.
+- `seal()` wraps the tail in its own anonymous `Colon` and appends a `(does>)`
+  primitive to the build body, closing over that Colon.
+- At run time, `(does>)` redefines the latest dictionary word by composition:
+  new behavior = execute old word (a CREATEd word pushes its data address),
+  then execute the tail. Shadowing via the persistent dictionary — no mutation.
+
+Because the tail never lives in the build body, `DOES>` needs no EXIT semantics:
+the defining word simply ends after `(does>)`. Guards: one `DOES>` per
+definition; `DO`..`LOOP` may not span the split; unresolved branches in the
+tail are caught at seal. Not guarded: `IF` spanning the split (backpatch indices
+would cross lists); composition is permissive about what the latest word is
+(ANS restricts to CREATEd words).
+
+Learnings: the "hard" classic formulation was an artifact of the threaded-code
+model — in a structure where definitions are values, splitting at compile time
+is both simpler and more in keeping with the codebase (the tail is just another
+immutable `Colon`, and retrofit is dictionary shadowing, which fjorth already
+had). All 11 new tests passed on the first run, including `: ARRAY CREATE CELLS
+ALLOT DOES> + ;` and control flow inside the tail.
+
+### EVALUATE (2026-07-19)
+
+`EVALUATE ( addr u -- )` interprets a cell string as source. The tokenizer
+became reentrant the simple way: `Interpreter.evaluate(String)` saves and
+restores `input`/`pos`/`tokenStart` around the shared token loop, so
+evaluations nest arbitrarily (a test runs EVALUATE inside a word invoked by an
+outer EVALUATE). The primitive shares the cell-string reader (`poppedString`)
+with `TYPE`.
+
+Error location moved into `ForthException` as a once-only operation
+(`locate(line, position)` is a no-op if already located), applied by the token
+loop at every nesting level — innermost wins, so an error inside evaluated text
+points into that text rather than the outer line.
+
+Learnings: the one test failure was again a wrong expectation, and this time it
+was semantically instructive — `S" 42 ;" EVALUATE` typed while a definition is
+open does NOT close it, because EVALUATE is not immediate and gets compiled
+into the open definition. That is faithful ANS behavior, not a bug; the test
+was rewritten to assert what it actually meant (STATE set inside an evaluation
+persists after it).
 
 ## Cross-phase observations
 

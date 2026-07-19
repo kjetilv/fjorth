@@ -192,22 +192,19 @@ public final class Primitives {
                 }
             ),
             primitive(
-                "TYPE", interpreter -> {
-                    Machine m = interpreter.machine();
-                    long length = m.pop();
-                    long address = m.pop();
-                    StringBuilder text = new StringBuilder();
-                    for (long i = 0; i < length; i++) {
-                        text.append((char) m.fetch(address + i));
-                    }
-                    interpreter.print(text.toString());
-                }
+                "TYPE", interpreter ->
+                    interpreter.print(poppedString(interpreter.machine()))
+            ),
+            primitive(
+                "EVALUATE", interpreter ->
+                    interpreter.evaluate(poppedString(interpreter.machine()))
             ),
             immediate("(", interpreter -> interpreter.readUntil(')')),
             immediate("\\", Interpreter::readRestOfLine),
             primitive(":", interpreter -> interpreter.beginDefinition(interpreter.word(":"))),
             immediate(";", Interpreter::endDefinition),
             primitive("IMMEDIATE", Interpreter::makeLatestImmediate),
+            immediate("DOES>", interpreter -> interpreter.open().beginTail()),
             primitive(
                 "CONSTANT", interpreter -> {
                     String name = interpreter.word("CONSTANT");
@@ -466,5 +463,15 @@ public final class Primitives {
 
     private static String formatted(Machine m, long value) {
         return Long.toString(value, m.base()).toUpperCase();
+    }
+
+    private static String poppedString(Machine m) {
+        long length = m.pop();
+        long address = m.pop();
+        StringBuilder text = new StringBuilder();
+        for (long i = 0; i < length; i++) {
+            text.append((char) m.fetch(address + i));
+        }
+        return text.toString();
     }
 }
