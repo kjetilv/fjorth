@@ -1,14 +1,9 @@
 package com.github.kjetilv.fjorth;
 
+import module java.base;
 import org.junit.jupiter.api.Test;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
-
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class CompilerTest {
 
@@ -17,7 +12,7 @@ class CompilerTest {
     private final StringWriter output = new StringWriter();
 
     private final Interpreter interpreter =
-        Bootstrap.interpreter(machine, new PrintWriter(output));
+        Bootstrap.interpreter(machine, new Stdout(output));
 
     private long[] stackAfter(String line) {
         interpreter.interpret(line);
@@ -54,18 +49,18 @@ class CompilerTest {
 
     @Test
     void semicolonOutsideDefinitionFails() {
-        ForthException e = assertThrows(ForthException.class, () -> interpreter.interpret(";"));
+        var e = assertThrows(FjorthException.class, () -> interpreter.interpret(";"));
         assertTrue(e.getMessage().startsWith("; outside definition"));
     }
 
     @Test
     void colonInsideDefinitionFails() {
-        assertThrows(ForthException.class, () -> interpreter.interpret(": OUTER : INNER"));
+        assertThrows(FjorthException.class, () -> interpreter.interpret(": OUTER : INNER"));
     }
 
     @Test
     void colonWithoutNameFails() {
-        assertThrows(ForthException.class, () -> interpreter.interpret(":"));
+        assertThrows(FjorthException.class, () -> interpreter.interpret(":"));
     }
 
     @Test
@@ -110,9 +105,9 @@ class CompilerTest {
 
     @Test
     void errorRecoveryDiscardsOpenDefinition() {
-        assertThrows(ForthException.class, () -> interpreter.interpret(": BROKEN frobnicate"));
+        assertThrows(FjorthException.class, () -> interpreter.interpret(": BROKEN frobnicate"));
         interpreter.reset();
         assertArrayEquals(new long[] {3}, stackAfter("1 2 +"));
-        assertThrows(ForthException.class, () -> interpreter.interpret("BROKEN"));
+        assertThrows(FjorthException.class, () -> interpreter.interpret("BROKEN"));
     }
 }

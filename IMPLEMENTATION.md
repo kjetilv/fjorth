@@ -28,7 +28,7 @@ point — before that there was nothing to run.
 **Executed.** `Word` (sealed interface over records: `Primitive`, `Colon`, `Branch`,
 `ZeroBranch`), `Machine` (data/return stacks as `long[]` with pointers, STATE flag),
 `Dictionary` (persistent chain, case-insensitive newest-first lookup),
-`ForthException`. 16 tests: stack discipline, underflow/overflow, shadowing,
+`FjorthException`. 16 tests: stack discipline, underflow/overflow, shadowing,
 structural sharing.
 
 **Learnings**
@@ -284,7 +284,7 @@ evaluations nest arbitrarily (a test runs EVALUATE inside a word invoked by an
 outer EVALUATE). The primitive shares the cell-string reader (`poppedString`)
 with `TYPE`.
 
-Error location moved into `ForthException` as a once-only operation
+Error location moved into `FjorthException` as a once-only operation
 (`locate(line, position)` is a no-op if already located), applied by the token
 loop at every nesting level — innermost wins, so an error inside evaluated text
 points into that text rather than the outer line.

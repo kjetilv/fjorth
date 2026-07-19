@@ -1,14 +1,9 @@
 package com.github.kjetilv.fjorth;
 
+import module java.base;
 import org.junit.jupiter.api.Test;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
-
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class ControlFlowTest {
 
@@ -17,7 +12,7 @@ class ControlFlowTest {
     private final StringWriter output = new StringWriter();
 
     private final Interpreter interpreter =
-        Bootstrap.interpreter(machine, new PrintWriter(output));
+        Bootstrap.interpreter(machine, new Stdout(output));
 
     private long[] stackAfter(String line) {
         interpreter.interpret(line);
@@ -156,30 +151,30 @@ class ControlFlowTest {
 
     @Test
     void loopWithoutDoFails() {
-        ForthException e = assertThrows(ForthException.class, () -> interpreter.interpret(": F LOOP ;"));
+        var e = assertThrows(FjorthException.class, () -> interpreter.interpret(": F LOOP ;"));
         assertTrue(e.getMessage().startsWith("LOOP without DO"));
     }
 
     @Test
     void leaveOutsideDoFails() {
-        ForthException e = assertThrows(ForthException.class, () -> interpreter.interpret(": F LEAVE ;"));
+        var e = assertThrows(FjorthException.class, () -> interpreter.interpret(": F LEAVE ;"));
         assertTrue(e.getMessage().startsWith("LEAVE outside DO"));
     }
 
     @Test
     void unterminatedDoFails() {
-        ForthException e = assertThrows(ForthException.class, () -> interpreter.interpret(": F 5 0 DO I ;"));
+        var e = assertThrows(FjorthException.class, () -> interpreter.interpret(": F 5 0 DO I ;"));
         assertTrue(e.getMessage().startsWith("unterminated DO"));
     }
 
     @Test
     void ifWithoutThenFails() {
-        ForthException e = assertThrows(ForthException.class, () -> interpreter.interpret(": F IF 1 ;"));
+        var e = assertThrows(FjorthException.class, () -> interpreter.interpret(": F IF 1 ;"));
         assertTrue(e.getMessage().startsWith("unresolved branch"));
     }
 
     @Test
     void controlFlowOutsideDefinitionFails() {
-        assertThrows(ForthException.class, () -> interpreter.interpret("1 IF 2 THEN"));
+        assertThrows(FjorthException.class, () -> interpreter.interpret("1 IF 2 THEN"));
     }
 }

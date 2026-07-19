@@ -1,9 +1,7 @@
 package com.github.kjetilv.fjorth;
 
+import module java.base;
 import org.junit.jupiter.api.Test;
-
-import java.io.PrintWriter;
-import java.io.StringWriter;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -13,7 +11,7 @@ class MemoryTest {
     private final Machine machine = new Machine();
 
     private final Interpreter interpreter =
-        Bootstrap.interpreter(machine, new PrintWriter(new StringWriter()));
+        Bootstrap.interpreter(machine, new Stdout(new StringWriter()));
 
     private long[] stackAfter(String line) {
         interpreter.interpret(line);
@@ -68,11 +66,11 @@ class MemoryTest {
 
     @Test
     void negativeAllotBelowZeroFails() {
-        assertThrows(ForthException.class, () -> interpreter.interpret("-10000 ALLOT"));
+        assertThrows(FjorthException.class, () -> interpreter.interpret("-10000 ALLOT"));
     }
 
     @Test
     void allotBeyondMemoryFails() {
-        assertThrows(ForthException.class, () -> interpreter.interpret("100000 ALLOT"));
+        assertThrows(FjorthException.class, () -> interpreter.interpret("100000 ALLOT"));
     }
 }

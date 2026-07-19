@@ -94,7 +94,7 @@ JAVA_HOME=~/.sdkman/candidates/java/current ./gradlew -q run --console=plain
   over `Primitives.dictionary()` then interprets each line of the resource
   `fjorth.fs` (classpath, same package). ALL test fixtures and the REPL go through
   this, so the bootstrap is validated by the whole suite.
-- **`Repl.java`** — main. Prints `fjorth` banner; per line: interpret + ` ok`, on
+- **`repl.java`** — main. Prints `fjorth` banner; per line: interpret + ` ok`, on
   ForthException print message (already has caret context) + `interpreter.reset()`.
   Dictionary/memory survive errors.
 - **`ForthException.java`** — RuntimeException with message only.
@@ -186,7 +186,7 @@ top, so R@ = I; J = peekReturn(2)).
 - `DictionaryTest` — shadowing, case, persistence. Uses raw `new Word.Primitive`.
 - `InterpreterTest`, `CompilerTest`, `ControlFlowTest`, `MemoryTest`, `PolishTest`
   — all use the pattern: fields `Machine`, `StringWriter output`,
-  `Interpreter interpreter = Bootstrap.interpreter(machine, new PrintWriter(output))`,
+  `Interpreter interpreter = Bootstrap.interpreter(machine, new Stdout(output))`,
   helper `long[] stackAfter(String line)`. Tests read as Forth transcripts.
 - Error-message assertions use `startsWith`/`contains` (messages carry a
   line+caret context suffix since Phase 6). Two historical test failures were both

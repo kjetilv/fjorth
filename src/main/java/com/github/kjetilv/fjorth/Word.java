@@ -1,8 +1,8 @@
 package com.github.kjetilv.fjorth;
 
-import java.util.List;
+import module java.base;
 
-public sealed interface Word {
+sealed interface Word {
 
     static Primitive primitive(String name, Effect effect) {
         return primitive(name, false, effect);
@@ -84,6 +84,7 @@ public sealed interface Word {
     @FunctionalInterface
     interface Effect {
 
+        @SuppressWarnings("ClassEscapesDefinedScope")
         void apply(Interpreter interpreter);
     }
 }

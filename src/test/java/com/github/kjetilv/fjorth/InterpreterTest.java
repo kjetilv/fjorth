@@ -1,14 +1,9 @@
 package com.github.kjetilv.fjorth;
 
+import module java.base;
 import org.junit.jupiter.api.Test;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
-
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class InterpreterTest {
 
@@ -17,7 +12,7 @@ class InterpreterTest {
     private final StringWriter output = new StringWriter();
 
     private final Interpreter interpreter =
-        Bootstrap.interpreter(machine, new PrintWriter(output));
+        Bootstrap.interpreter(machine, new Stdout(output));
 
     private long[] stackAfter(String line) {
         interpreter.interpret(line);
@@ -36,7 +31,7 @@ class InterpreterTest {
 
     @Test
     void unknownWordFails() {
-        ForthException e = assertThrows(ForthException.class, () -> interpreter.interpret("frobnicate"));
+        var e = assertThrows(FjorthException.class, () -> interpreter.interpret("frobnicate"));
         assertTrue(e.getMessage().startsWith("frobnicate ?"));
     }
 
@@ -50,9 +45,9 @@ class InterpreterTest {
 
     @Test
     void divisionByZeroFails() {
-        assertThrows(ForthException.class, () -> interpreter.interpret("1 0 /"));
+        assertThrows(FjorthException.class, () -> interpreter.interpret("1 0 /"));
         machine.reset();
-        assertThrows(ForthException.class, () -> interpreter.interpret("1 0 MOD"));
+        assertThrows(FjorthException.class, () -> interpreter.interpret("1 0 MOD"));
     }
 
     @Test

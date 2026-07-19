@@ -1,14 +1,9 @@
 package com.github.kjetilv.fjorth;
 
+import module java.base;
 import org.junit.jupiter.api.Test;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
-
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class PolishTest {
 
@@ -17,7 +12,7 @@ class PolishTest {
     private final StringWriter output = new StringWriter();
 
     private final Interpreter interpreter =
-        Bootstrap.interpreter(machine, new PrintWriter(output));
+        Bootstrap.interpreter(machine, new Stdout(output));
 
     private long[] stackAfter(String line) {
         interpreter.interpret(line);
@@ -55,7 +50,7 @@ class PolishTest {
     void wordsListsDictionaryWithoutDuplicates() {
         interpreter.interpret(": X 1 ; : X 2 ;");
         interpreter.interpret("WORDS");
-        String listed = output.toString();
+        var listed = output.toString();
         assertTrue(listed.contains("DUP"));
         assertTrue(listed.contains("2DUP"));
         assertEquals(1, listed.split("\\bX\\b", -1).length - 1);
@@ -82,7 +77,7 @@ class PolishTest {
     @Test
     void seeRendersBranchesWithIndices() {
         interpreter.interpret(": SIGN 0 < IF -1 ELSE 1 THEN ; SEE SIGN");
-        String rendered = output.toString();
+        var rendered = output.toString();
         assertTrue(rendered.startsWith(": SIGN\n"));
         assertTrue(rendered.contains("0branch -> "));
         assertTrue(rendered.contains("branch -> "));
@@ -104,13 +99,13 @@ class PolishTest {
 
     @Test
     void seeUnknownWordFails() {
-        assertThrows(ForthException.class, () -> interpreter.interpret("SEE FROBNICATE"));
+        assertThrows(FjorthException.class, () -> interpreter.interpret("SEE FROBNICATE"));
     }
 
     @Test
     void errorsCarryInputPositionContext() {
-        ForthException e = assertThrows(
-            ForthException.class,
+        var e = assertThrows(
+            FjorthException.class,
             () -> interpreter.interpret("1 2 frobnicate")
         );
         assertEquals("frobnicate ?\n1 2 frobnicate\n    ^", e.getMessage());
@@ -118,8 +113,8 @@ class PolishTest {
 
     @Test
     void errorPositionPointsAtFailingWordNotLineStart() {
-        ForthException e = assertThrows(
-            ForthException.class,
+        var e = assertThrows(
+            FjorthException.class,
             () -> interpreter.interpret("1 0 /")
         );
         assertEquals("division by zero\n1 0 /\n    ^", e.getMessage());

@@ -1,13 +1,10 @@
 package com.github.kjetilv.fjorth;
 
-import java.util.Optional;
-import java.util.stream.Stream;
+import module java.base;
 
-public final class Dictionary {
+final class Dictionary {
 
-    private static final Dictionary EMPTY = new Dictionary(null, null);
-
-    public static Dictionary empty() {
+    static Dictionary empty() {
         return EMPTY;
     }
 
@@ -37,11 +34,13 @@ public final class Dictionary {
     }
 
     public Optional<Word> lookup(String name) {
-        for (Dictionary entry = this; entry.word != null; entry = entry.parent) {
+        for (var entry = this; entry.word != null; entry = entry.parent) {
             if (entry.word.name().equalsIgnoreCase(name)) {
                 return Optional.of(entry.word);
             }
         }
         return Optional.empty();
     }
+
+    private static final Dictionary EMPTY = new Dictionary(null, null);
 }

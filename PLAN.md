@@ -37,7 +37,7 @@ Status values: `Not started` | `In progress` | `Done`
    - `Primitive(String name, boolean immediate, Effect effect)` where `Effect` is `void apply(Machine m)`
    - `Colon(String name, boolean immediate, List<Word> body)` — flat list, executed by index so branch words can jump
    - Internal branch primitives: `Branch(int offset)` and `ZeroBranch(int offset)`
-2. **`Machine`** — data stack (`long[]` + pointer), return stack, `STATE` flag, reference to the definition under construction. Underflow/overflow raise a `ForthException` carrying a message; the REPL catches it and resets stacks.
+2. **`Machine`** — data stack (`long[]` + pointer), return stack, `STATE` flag, reference to the definition under construction. Underflow/overflow raise a `FjorthException` carrying a message; the REPL catches it and resets stacks.
 3. **`Dictionary`** — persistent chain (each entry links to the previous), lookup walks newest-first. Gives shadowing semantics for free; compiled `Colon` bodies hold direct `Word` references so old definitions stay valid after redefinition.
 
 **Tests:** stack push/pop/underflow, dictionary shadowing.

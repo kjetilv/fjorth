@@ -1,14 +1,12 @@
 package com.github.kjetilv.fjorth;
 
-import java.io.PrintWriter;
-import java.util.List;
-import java.util.Optional;
+import module java.base;
 
-public final class Interpreter {
+final class Interpreter implements Fjorth {
 
     private final Machine machine;
 
-    private final PrintWriter out;
+    private final Out out;
 
     private Dictionary dictionary;
 
@@ -20,57 +18,36 @@ public final class Interpreter {
 
     private int tokenStart;
 
-    public Interpreter(Machine machine, Dictionary dictionary, PrintWriter out) {
-        this.machine = machine;
-        this.dictionary = dictionary;
-        this.out = out;
+    Interpreter(Machine machine, Dictionary dictionary, Out out) {
+        this.machine = Objects.requireNonNull(machine, "machine");
+        this.dictionary = Objects.requireNonNull(dictionary, "dictionary");
+        this.out = Objects.requireNonNull(out, "out");
     }
 
-    public Machine machine() {
-        return machine;
-    }
-
-    public Dictionary dictionary() {
-        return dictionary;
-    }
-
-    public void interpret(String line) {
-        input = line;
-        pos = 0;
+    @Override
+    public Result eval(String line) {
         try {
-            tokenLoop();
-        } finally {
-            out.flush();
+            interpret(line);
+            return OK;
+        } catch (FjorthException e) {
+            return new Result.Failed(e.getMessage());
         }
     }
 
-    public void evaluate(String text) {
-        String savedInput = input;
-        int savedPos = pos;
-        int savedTokenStart = tokenStart;
-        input = text;
-        pos = 0;
-        try {
-            tokenLoop();
-        } finally {
-            input = savedInput;
-            pos = savedPos;
-            tokenStart = savedTokenStart;
-        }
+    @Override
+    public void reset() {
+        machine.reset();
+        definition = null;
     }
 
-    public void execute(Word word) {
-        switch (word) {
-            case Word.Primitive primitive -> primitive.effect().apply(this);
-            case Word.Colon colon -> run(colon);
-            case Word.Literal(long value) -> machine.push(value);
-            case Word.Branch _, Word.ZeroBranch _ -> throw new ForthException("branch outside definition");
-        }
+    @Override
+    public Out out() {
+        return this.out;
     }
 
     public void beginDefinition(String name) {
         if (machine.compiling()) {
-            throw new ForthException(": inside definition");
+            throw new FjorthException(": inside definition");
         }
         definition = new Definition(name);
         machine.compiling(true);
@@ -78,7 +55,7 @@ public final class Interpreter {
 
     public void endDefinition() {
         if (!machine.compiling()) {
-            throw new ForthException("; outside definition");
+            throw new FjorthException("; outside definition");
         }
         define(definition.seal());
         definition = null;
@@ -94,23 +71,18 @@ public final class Interpreter {
     }
 
     public void makeLatestImmediate() {
-        Word latest = dictionary.latest()
-            .orElseThrow(() -> new ForthException("IMMEDIATE: empty dictionary"));
-        if (latest instanceof Word.Colon(String name, boolean _, List<Word> body)) {
+        var latest = dictionary.latest()
+            .orElseThrow(() -> new FjorthException("IMMEDIATE: empty dictionary"));
+        if (latest instanceof Word.Colon(var name, var _, var body)) {
             dictionary = dictionary.define(new Word.Colon(name, true, body));
         } else {
-            throw new ForthException("IMMEDIATE: not a colon definition: " + latest.name());
+            throw new FjorthException("IMMEDIATE: not a colon definition: " + latest.name());
         }
     }
 
     public String word(String requester) {
         return nextToken()
-            .orElseThrow(() -> new ForthException(requester + ": missing name"));
-    }
-
-    public void reset() {
-        machine.reset();
-        definition = null;
+            .orElseThrow(() -> new FjorthException(requester + ": missing name"));
     }
 
     public void print(String text) {
@@ -122,11 +94,11 @@ public final class Interpreter {
     }
 
     public String readUntil(char delimiter) {
-        int start = pos;
+        var start = pos;
         while (pos < input.length() && input.charAt(pos) != delimiter) {
             pos++;
         }
-        String text = input.substring(start, pos);
+        var text = input.substring(start, pos);
         if (pos < input.length()) {
             pos++;
         }
@@ -137,20 +109,64 @@ public final class Interpreter {
         pos = input.length();
     }
 
+    void interpret(String line) {
+        input = line;
+        pos = 0;
+        try {
+            tokenLoop();
+        } finally {
+            out.flush();
+        }
+    }
+
+    void execute(Word... words) {
+        for (var word : words) {
+            switch (word) {
+                case Word.Primitive primitive -> primitive.effect().apply(this);
+                case Word.Colon colon -> run(colon);
+                case Word.Literal(var value) -> machine.push(value);
+                case Word.Branch _, Word.ZeroBranch _ -> throw new FjorthException("branch outside definition");
+            }
+        }
+    }
+
+    Machine machine() {
+        return machine;
+    }
+
+    Dictionary dictionary() {
+        return dictionary;
+    }
+
+    void evaluate(String text) {
+        var savedInput = input;
+        var savedPos = pos;
+        var savedTokenStart = tokenStart;
+        input = text;
+        pos = 0;
+        try {
+            tokenLoop();
+        } finally {
+            input = savedInput;
+            pos = savedPos;
+            tokenStart = savedTokenStart;
+        }
+    }
+
     Definition open() {
         if (definition == null) {
-            throw new ForthException("compilation outside definition");
+            throw new FjorthException("compilation outside definition");
         }
         return definition;
     }
 
     private void run(Word.Colon colon) {
-        List<Word> body = colon.body();
-        int ip = 0;
+        var body = colon.body();
+        var ip = 0;
         while (ip < body.size()) {
             ip = switch (body.get(ip)) {
-                case Word.Branch(int target) -> target;
-                case Word.ZeroBranch(int target) -> machine.pop() == 0 ? target : ip + 1;
+                case Word.Branch(var target) -> target;
+                case Word.ZeroBranch(var target) -> machine.pop() == 0 ? target : ip + 1;
                 case Word word -> {
                     execute(word);
                     yield ip + 1;
@@ -160,16 +176,16 @@ public final class Interpreter {
     }
 
     private void handle(String token) {
-        Optional<Word> word = dictionary.lookup(token);
+        var word = dictionary.lookup(token);
         if (word.isPresent()) {
-            Word found = word.get();
+            var found = word.get();
             if (machine.compiling() && !found.immediate()) {
                 append(found);
             } else {
                 execute(found);
             }
         } else {
-            long value = number(token);
+            var value = number(token);
             if (machine.compiling()) {
                 append(Word.literal(value));
             } else {
@@ -180,10 +196,10 @@ public final class Interpreter {
 
     private void tokenLoop() {
         try {
-            for (Optional<String> token = nextToken(); token.isPresent(); token = nextToken()) {
+            for (var token = nextToken(); token.isPresent(); token = nextToken()) {
                 handle(token.get());
             }
-        } catch (ForthException e) {
+        } catch (FjorthException e) {
             throw e.locate(input, tokenStart);
         }
     }
@@ -199,7 +215,7 @@ public final class Interpreter {
         while (pos < input.length() && !Character.isWhitespace(input.charAt(pos))) {
             pos++;
         }
-        String token = input.substring(tokenStart, pos);
+        var token = input.substring(tokenStart, pos);
         if (pos < input.length()) {
             pos++;
         }
@@ -210,7 +226,9 @@ public final class Interpreter {
         try {
             return Long.parseLong(token, machine.base());
         } catch (NumberFormatException e) {
-            throw new ForthException(token + " ?");
+            throw new FjorthException(token + " ?");
         }
     }
+
+    private static final Result.OK OK = new Result.OK();
 }

@@ -1,9 +1,6 @@
 package com.github.kjetilv.fjorth;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.List;
+import module java.base;
 
 final class Definition {
 
@@ -31,22 +28,22 @@ final class Definition {
     }
 
     void resolve(int index, int target) {
-        List<Word> active = active();
+        var active = active();
         active.set(
             index, switch (active.get(index)) {
                 case Word.Branch _ -> Word.branch(target);
                 case Word.ZeroBranch _ -> new Word.ZeroBranch(target);
-                case Word word -> throw new ForthException("not a branch: " + word.name());
+                case Word word -> throw new FjorthException("not a branch: " + word.name());
             }
         );
     }
 
     void beginTail() {
         if (tail != null) {
-            throw new ForthException("multiple DOES> in " + name);
+            throw new FjorthException("multiple DOES> in " + name);
         }
         if (!loops.isEmpty()) {
-            throw new ForthException("unterminated DO before DOES> in " + name);
+            throw new FjorthException("unterminated DO before DOES> in " + name);
         }
         tail = new ArrayList<>();
     }
@@ -56,17 +53,17 @@ final class Definition {
     }
 
     void addLeave(int index) {
-        List<Integer> sites = loops.peek();
+        var sites = loops.peek();
         if (sites == null) {
-            throw new ForthException("LEAVE outside DO");
+            throw new FjorthException("LEAVE outside DO");
         }
         sites.add(index);
     }
 
     List<Integer> endLoop() {
-        List<Integer> sites = loops.poll();
+        var sites = loops.poll();
         if (sites == null) {
-            throw new ForthException("LOOP without DO");
+            throw new FjorthException("LOOP without DO");
         }
         return sites;
     }
@@ -77,15 +74,15 @@ final class Definition {
 
     Word.Colon seal() {
         if (!loops.isEmpty()) {
-            throw new ForthException("unterminated DO in " + name);
+            throw new FjorthException("unterminated DO in " + name);
         }
         if (unresolvedBody() || unresolvedTail()) {
-            throw new ForthException("unresolved branch in " + name);
+            throw new FjorthException("unresolved branch in " + name);
         }
         if (tail != null) {
             body.add(retrofit(Word.colon("(does> " + name + ")", false, tail)));
         }
-        Word.Colon colon = Word.colon(name, false, body);
+        var colon = Word.colon(name, false, body);
         self[0] = colon;
         return colon;
     }
@@ -105,12 +102,11 @@ final class Definition {
     private static Word retrofit(Word.Colon tailColon) {
         return Word.primitive(
             "(does>)", interpreter -> {
-                Word latest = interpreter.dictionary().latest()
-                    .orElseThrow(() -> new ForthException("DOES>: empty dictionary"));
+                var latest = interpreter.dictionary().latest()
+                    .orElseThrow(() -> new FjorthException("DOES>: empty dictionary"));
                 interpreter.define(Word.primitive(
                     latest.name(), inner -> {
-                        inner.execute(latest);
-                        inner.execute(tailColon);
+                        inner.execute(latest, tailColon);
                     }
                 ));
             }
@@ -119,8 +115,8 @@ final class Definition {
 
     private static boolean unresolved(Word word) {
         return switch (word) {
-            case Word.Branch(int target) -> target < 0;
-            case Word.ZeroBranch(int target) -> target < 0;
+            case Word.Branch(var target) -> target < 0;
+            case Word.ZeroBranch(var target) -> target < 0;
             default -> false;
         };
     }

@@ -1,12 +1,8 @@
 package com.github.kjetilv.fjorth;
 
-import java.util.Arrays;
+import module java.base;
 
-public final class Machine {
-
-    private static final int DEFAULT_STACK_SIZE = 256;
-
-    private static final int DEFAULT_MEMORY_CELLS = 4096;
+final class Machine {
 
     private final long[] data;
 
@@ -24,15 +20,15 @@ public final class Machine {
 
     private boolean compiling;
 
-    public Machine() {
+    Machine() {
         this(DEFAULT_STACK_SIZE, DEFAULT_STACK_SIZE);
     }
 
-    public Machine(int dataStackSize, int returnStackSize) {
+    Machine(int dataStackSize, int returnStackSize) {
         this(dataStackSize, returnStackSize, DEFAULT_MEMORY_CELLS);
     }
 
-    public Machine(int dataStackSize, int returnStackSize, int memoryCells) {
+    Machine(int dataStackSize, int returnStackSize, int memoryCells) {
         this.data = new long[dataStackSize];
         this.returns = new long[returnStackSize];
         this.memory = new long[memoryCells];
@@ -45,30 +41,30 @@ public final class Machine {
     }
 
     public int base() {
-        long base = fetch(baseAddress);
+        var base = fetch(baseAddress);
         if (base < 2 || base > 36) {
-            throw new ForthException("invalid BASE: " + base);
+            throw new FjorthException("invalid BASE: " + base);
         }
         return (int) base;
     }
 
     public void push(long value) {
         if (dataTop == data.length) {
-            throw new ForthException("stack overflow");
+            throw new FjorthException("stack overflow");
         }
         data[dataTop++] = value;
     }
 
     public long pop() {
         if (dataTop == 0) {
-            throw new ForthException("stack underflow");
+            throw new FjorthException("stack underflow");
         }
         return data[--dataTop];
     }
 
     public long peek() {
         if (dataTop == 0) {
-            throw new ForthException("stack underflow");
+            throw new FjorthException("stack underflow");
         }
         return data[dataTop - 1];
     }
@@ -83,14 +79,14 @@ public final class Machine {
 
     public void pushReturn(long value) {
         if (returnsTop == returns.length) {
-            throw new ForthException("return stack overflow");
+            throw new FjorthException("return stack overflow");
         }
         returns[returnsTop++] = value;
     }
 
     public long popReturn() {
         if (returnsTop == 0) {
-            throw new ForthException("return stack underflow");
+            throw new FjorthException("return stack underflow");
         }
         return returns[--returnsTop];
     }
@@ -101,7 +97,7 @@ public final class Machine {
 
     public long peekReturn(int offset) {
         if (returnsTop <= offset) {
-            throw new ForthException("return stack underflow");
+            throw new FjorthException("return stack underflow");
         }
         return returns[returnsTop - 1 - offset];
     }
@@ -112,12 +108,12 @@ public final class Machine {
 
     public int allot(int cells) {
         if (here + cells > memory.length) {
-            throw new ForthException("memory exhausted");
+            throw new FjorthException("memory exhausted");
         }
         if (here + cells < 0) {
-            throw new ForthException("negative ALLOT below memory start");
+            throw new FjorthException("negative ALLOT below memory start");
         }
-        int address = here;
+        var address = here;
         here += cells;
         return address;
     }
@@ -150,8 +146,12 @@ public final class Machine {
 
     private int checkAddress(long address) {
         if (address < 0 || address >= memory.length) {
-            throw new ForthException("invalid address: " + address);
+            throw new FjorthException("invalid address: " + address);
         }
         return (int) address;
     }
+
+    private static final int DEFAULT_STACK_SIZE = 256;
+
+    private static final int DEFAULT_MEMORY_CELLS = 4096;
 }
