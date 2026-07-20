@@ -7,7 +7,7 @@ final class Primitives {
     static Dictionary dictionary() {
         return words().stream()
             .reduce(
-                Dictionary.empty(),
+                Dictionary.EMPTY,
                 Dictionary::define,
                 (_, second) -> second
             );

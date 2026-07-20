@@ -2,19 +2,10 @@ package com.github.kjetilv.fjorth;
 
 import module java.base;
 
-final class Dictionary {
+record Dictionary(Word word, Dictionary parent) {
 
-    static Dictionary empty() {
-        return EMPTY;
-    }
-
-    private final Word word;
-
-    private final Dictionary parent;
-
-    private Dictionary(Word word, Dictionary parent) {
-        this.word = word;
-        this.parent = parent;
+    public static Dictionary of(Word word) {
+        return EMPTY.define(word);
     }
 
     public Dictionary define(Word word) {
@@ -29,7 +20,11 @@ final class Dictionary {
     }
 
     public Stream<Word> words() {
-        return Stream.iterate(this, entry -> entry.word != null, entry -> entry.parent)
+        return Stream.iterate(
+                this,
+                entry -> entry.word != null,
+                entry -> entry.parent
+            )
             .map(entry -> entry.word);
     }
 
@@ -42,5 +37,5 @@ final class Dictionary {
         return Optional.empty();
     }
 
-    private static final Dictionary EMPTY = new Dictionary(null, null);
+    static final Dictionary EMPTY = new Dictionary(null, null);
 }

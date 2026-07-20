@@ -9,20 +9,20 @@ class DictionaryTest {
 
     @Test
     void emptyDictionaryFindsNothing() {
-        assertTrue(Dictionary.empty().lookup("DUP").isEmpty());
+        assertTrue(Dictionary.EMPTY.lookup("DUP").isEmpty());
     }
 
     @Test
     void definedWordIsFound() {
         var dup = primitive("DUP");
-        var dictionary = Dictionary.empty().define(dup);
+        var dictionary = Dictionary.of(dup);
         assertSame(dup, dictionary.lookup("DUP").orElseThrow());
     }
 
     @Test
     void lookupIsCaseInsensitive() {
         var dup = primitive("DUP");
-        var dictionary = Dictionary.empty().define(dup);
+        var dictionary = Dictionary.of(dup);
         assertSame(dup, dictionary.lookup("dup").orElseThrow());
         assertSame(dup, dictionary.lookup("Dup").orElseThrow());
     }
@@ -31,13 +31,13 @@ class DictionaryTest {
     void redefinitionShadowsOlderWord() {
         var first = primitive("X");
         var second = primitive("X");
-        var dictionary = Dictionary.empty().define(first).define(second);
+        var dictionary = Dictionary.of(first).define(second);
         assertSame(second, dictionary.lookup("X").orElseThrow());
     }
 
     @Test
     void defineDoesNotMutateOriginal() {
-        var base = Dictionary.empty();
+        var base = Dictionary.EMPTY;
         var extended = base.define(primitive("DUP"));
         assertTrue(base.lookup("DUP").isEmpty());
         assertTrue(extended.lookup("DUP").isPresent());
@@ -47,7 +47,7 @@ class DictionaryTest {
     void compiledReferenceSurvivesRedefinition() {
         var first = primitive("X");
         Word caller = Word.colon("CALLER", false, List.of(first));
-        var dictionary = Dictionary.empty()
+        var dictionary = Dictionary.EMPTY
             .define(first)
             .define(caller)
             .define(primitive("X"));

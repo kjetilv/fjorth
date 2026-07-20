@@ -342,6 +342,45 @@ before the error message so output flushed by the failing line does not share
 its line. Verified with a piped session loading a definitions file and
 recovering from a mid-line error.
 
+### GraalVM native image (2026-07-19)
+
+Added the `org.graalvm.buildtools.native` plugin and a `graalvmNative` block
+producing a `fjorth` native executable (`./gradlew nativeCompile`). The single
+non-obvious requirement was embedding the bootstrap: `Bootstrap` loads
+`fjorth.fs` via `getResourceAsStream`, and native-image excludes resources
+unless told, so `-H:IncludeResources=fjorth\.fs` is mandatory — without it the
+binary launches and then dies constructing the default interpreter. No
+reflection metadata was needed: the interpreter is plain switches over sealed
+types and records, so the resource was the only concern. `--no-fallback` makes
+a genuine-image failure loud rather than silently producing a JVM-backed
+fallback.
+
+Open question resolved by testing: the entry point is a JEP 512 compact source
+file with an instance `main` (`repl`), not a classic `static void main`.
+GraalVM 25 (`25.0.3-graal`) compiled it without special handling. Verified the
+binary end to end — bootstrap words (proving the resource embedded), BASE
+switching, `S"`/`TYPE`, error recovery, and `.fs` file args all work; ~19s
+build, ~14MB artifact. JVM `test` unaffected.
+
+### nativeTest (2026-07-19)
+
+Added a `test` binary to the `graalvmNative` block (same
+`-H:IncludeResources=fjorth\.fs`, since the fixtures go through Bootstrap) so
+`./gradlew nativeTest` compiles and runs the suite as a native image. This
+forced a plugin upgrade 0.10.6 → 0.11.0: under 0.10.6, `nativeTestCompile`
+failed because its bundled JUnit-native metadata predates JUnit Platform 6 —
+JUnit 6 launcher classes (`HierarchicalOutputDirectoryCreator`, then
+`LauncherDiscoveryResult$EngineResultInfo`, …) reached the image heap without
+initialization directives, and adding `--initialize-at-build-time` per class
+cascaded endlessly. 0.11.0 is JUnit-6-aware and needs no workaround flags.
+Result: all 141 tests pass in native mode (~34s build+run). The main
+`nativeCompile` and JVM `test` were re-verified green under 0.11.0.
+
+Learning: when native-image reports an image-heap object from a framework
+class, chasing it with per-class `--initialize-at-build-time` is the wrong
+move if the framework is newer than the native-support library — the fix is
+aligning versions, exactly as the error's own "update dependencies" hint says.
+
 ## Cross-phase observations
 
 - **Phase discipline held where it mattered and bent where reality required.** The

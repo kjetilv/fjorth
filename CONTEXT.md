@@ -32,6 +32,8 @@ A Forth implementation in Java 25. Gradle project `fjorth`, group
 ```
 JAVA_HOME=~/.sdkman/candidates/java/current ./gradlew test
 printf '1 2 + .\n' | JAVA_HOME=~/.sdkman/candidates/java/current ./gradlew -q run --console=plain
+# native binary (GraalVM), output at build/native/nativeCompile/fjorth:
+JAVA_HOME=~/.sdkman/candidates/java/25.0.3-graal ./gradlew nativeCompile
 ```
 
 - The environment's `JAVA_HOME` points to a REMOVED JDK (`25.0.2-graalce`); the
@@ -41,6 +43,24 @@ printf '1 2 + .\n' | JAVA_HOME=~/.sdkman/candidates/java/current ./gradlew -q ru
   features throughout: module imports (JEP 511), compact source files /
   instance main (JEP 512), unnamed patterns (`_`), record deconstruction.
 - JUnit 6 (junit-bom 6.0.0, jupiter), `useJUnitPlatform()`.
+- Native image: `org.graalvm.buildtools.native` plugin (0.11.0), `graalvmNative`
+  block configures two binaries:
+  - `main` → `fjorth`, mainClass `repl`, `--no-fallback`,
+    `-H:IncludeResources=fjorth\.fs` (REQUIRED — Bootstrap loads fjorth.fs as a
+    classpath resource; without this the binary starts then dies on a missing
+    resource).
+  - `test` → same `-H:IncludeResources=fjorth\.fs` (the test fixtures also go
+    through Bootstrap), driving `nativeTest`.
+  Needs a GraalVM 25 toolchain (`25.0.3-graal` has `native-image`); set
+  JAVA_HOME to it for native tasks. Plugin MUST be 0.11.0, not 0.10.6: 0.10.6's
+  bundled JUnit-native metadata predates JUnit Platform 6 and fails
+  `nativeTestCompile` with cascading image-heap/initialize-at-build-time errors
+  on `org.junit.platform.launcher.core.*`; 0.11.0 is JUnit-6-aware and needs no
+  workaround flags. Verified 2026-07-19: `nativeCompile` ~19s / ~14MB binary
+  (bootstrap/base/strings/error-recovery/file-args all work); `nativeTest`
+  builds and runs all 141 tests green in native mode. No reflection config
+  needed — the interpreter uses none; the resource was the only concern. Tasks:
+  `nativeCompile`, `nativeRun`, `nativeTest`.
 
 ## Architecture
 

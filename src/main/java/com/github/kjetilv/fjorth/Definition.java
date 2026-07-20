@@ -42,7 +42,7 @@ final class Definition {
         if (tail != null) {
             throw new FjorthException("multiple DOES> in " + name);
         }
-        if (!loops.isEmpty()) {
+        if (inLoop()) {
             throw new FjorthException("unterminated DO before DOES> in " + name);
         }
         tail = new ArrayList<>();
@@ -73,7 +73,7 @@ final class Definition {
     }
 
     Word.Colon seal() {
-        if (!loops.isEmpty()) {
+        if (inLoop()) {
             throw new FjorthException("unterminated DO in " + name);
         }
         if (unresolvedBody() || unresolvedTail()) {
@@ -85,6 +85,10 @@ final class Definition {
         var colon = Word.colon(name, false, body);
         self[0] = colon;
         return colon;
+    }
+
+    private boolean inLoop() {
+        return !loops.isEmpty();
     }
 
     private boolean unresolvedBody() {
@@ -105,9 +109,8 @@ final class Definition {
                 var latest = interpreter.dictionary().latest()
                     .orElseThrow(() -> new FjorthException("DOES>: empty dictionary"));
                 interpreter.define(Word.primitive(
-                    latest.name(), inner -> {
-                        inner.execute(latest, tailColon);
-                    }
+                    latest.name(), inner ->
+                        inner.execute(latest, tailColon)
                 ));
             }
         );
