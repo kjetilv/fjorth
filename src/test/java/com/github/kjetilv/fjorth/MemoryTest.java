@@ -11,10 +11,10 @@ class MemoryTest {
     private final Machine machine = new Machine();
 
     private final Interpreter interpreter =
-        Bootstrap.interpreter(machine, Out.to(new StringWriter()));
+        Bootstrap.interpreter(machine, Console.to(new StringWriter()));
 
     private long[] stackAfter(String line) {
-        interpreter.interpret(line);
+        interpreter.interpretLine(line);
         return machine.stack();
     }
 
@@ -35,27 +35,27 @@ class MemoryTest {
 
     @Test
     void createNamesAnAddress() {
-        interpreter.interpret("CREATE A 3 CELLS ALLOT");
-        interpreter.interpret("11 A ! 22 A 1 + ! 33 A 2 + !");
+        interpreter.interpretLine("CREATE A 3 CELLS ALLOT");
+        interpreter.interpretLine("11 A ! 22 A 1 + ! 33 A 2 + !");
         assertArrayEquals(new long[] {22, 33, 11}, stackAfter("A 1 + @ A 2 + @ A @"));
     }
 
     @Test
     void commaCompilesValuesIntoMemory() {
-        interpreter.interpret("CREATE NUMS 1 , 2 , 3 ,");
+        interpreter.interpretLine("CREATE NUMS 1 , 2 , 3 ,");
         assertArrayEquals(new long[] {1, 3}, stackAfter("NUMS @ NUMS 2 + @"));
     }
 
     @Test
     void createdWordsAreDistinct() {
-        interpreter.interpret("CREATE A 1 CELLS ALLOT CREATE B 1 CELLS ALLOT");
+        interpreter.interpretLine("CREATE A 1 CELLS ALLOT CREATE B 1 CELLS ALLOT");
         assertArrayEquals(new long[] {7, 8}, stackAfter("7 A ! 8 B ! A @ B @"));
     }
 
     @Test
     void createWorksInsideDefinitions() {
-        interpreter.interpret("CREATE TABLE 10 , 20 , 30 ,");
-        interpreter.interpret(": NTH TABLE + @ ;");
+        interpreter.interpretLine("CREATE TABLE 10 , 20 , 30 ,");
+        interpreter.interpretLine(": NTH TABLE + @ ;");
         assertArrayEquals(new long[] {20}, stackAfter("1 NTH"));
     }
 
@@ -66,11 +66,11 @@ class MemoryTest {
 
     @Test
     void negativeAllotBelowZeroFails() {
-        assertThrows(FjorthException.class, () -> interpreter.interpret("-10000 ALLOT"));
+        assertThrows(FjorthException.class, () -> interpreter.interpretLine("-10000 ALLOT"));
     }
 
     @Test
     void allotBeyondMemoryFails() {
-        assertThrows(FjorthException.class, () -> interpreter.interpret("100000 ALLOT"));
+        assertThrows(FjorthException.class, () -> interpreter.interpretLine("100000 ALLOT"));
     }
 }

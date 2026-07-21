@@ -6,7 +6,7 @@ final class Interpreter implements Fjorth {
 
     private final Machine machine;
 
-    private final Out out;
+    private final Console console;
 
     private Dictionary dictionary;
 
@@ -18,19 +18,23 @@ final class Interpreter implements Fjorth {
 
     private int tokenStart;
 
-    Interpreter(Machine machine, Dictionary dictionary, Out out) {
+    Interpreter(Machine machine, Dictionary dictionary, Console console) {
         this.machine = Objects.requireNonNull(machine, "machine");
         this.dictionary = Objects.requireNonNull(dictionary, "dictionary");
-        this.out = Objects.requireNonNull(out, "out");
+        this.console = Objects.requireNonNull(console, "out");
     }
 
     @Override
-    public Result eval(String line) {
+    public Result interpret(String line) {
         try {
-            interpret(line);
+            interpretLine(line);
             return OK;
         } catch (FjorthException e) {
-            return new Result.Failed(e.getMessage(), this::reset);
+            try {
+                return new Result.Failed(e.getMessage());
+            } finally {
+                reset();
+            }
         }
     }
 
@@ -41,11 +45,11 @@ final class Interpreter implements Fjorth {
     }
 
     @Override
-    public Out out() {
-        return this.out;
+    public Console console() {
+        return this.console;
     }
 
-    public void beginDefinition(String name) {
+    void beginDefinition(String name) {
         if (machine.compiling()) {
             throw new FjorthException(": inside definition");
         }
@@ -53,7 +57,7 @@ final class Interpreter implements Fjorth {
         machine.compiling(true);
     }
 
-    public void endDefinition() {
+    void endDefinition() {
         if (!machine.compiling()) {
             throw new FjorthException("; outside definition");
         }
@@ -62,38 +66,37 @@ final class Interpreter implements Fjorth {
         machine.compiling(false);
     }
 
-    public void append(Word word) {
+    void append(Word word) {
         open().append(word);
     }
 
-    public void define(Word word) {
+    void define(Word word) {
         dictionary = dictionary.define(word);
     }
 
-    public void makeLatestImmediate() {
+    void makeLatestImmediate() {
         var latest = dictionary.latest()
             .orElseThrow(() -> new FjorthException("IMMEDIATE: empty dictionary"));
-        if (latest instanceof Word.Colon(var name, var _, var body)) {
-            dictionary = dictionary.define(new Word.Colon(name, true, body));
-        } else {
+        if (!(latest instanceof Word.Colon(var name, var _, var body))) {
             throw new FjorthException("IMMEDIATE: not a colon definition: " + latest.name());
         }
+        dictionary = dictionary.define(new Word.Colon(name, true, body));
     }
 
-    public String word(String requester) {
+    String word(String requester) {
         return nextToken()
             .orElseThrow(() -> new FjorthException(requester + ": missing name"));
     }
 
-    public void print(String text) {
-        out.print(text);
+    void print(String text) {
+        console.print(text);
     }
 
-    public void print(char c) {
-        out.print(c);
+    void print(char c) {
+        console.print(c);
     }
 
-    public String readUntil(char delimiter) {
+    String readUntil(char delimiter) {
         var start = pos;
         while (pos < input.length() && input.charAt(pos) != delimiter) {
             pos++;
@@ -105,17 +108,17 @@ final class Interpreter implements Fjorth {
         return text;
     }
 
-    public void readRestOfLine() {
+    void readRestOfLine() {
         pos = input.length();
     }
 
-    void interpret(String line) {
+    void interpretLine(String line) {
         input = line;
         pos = 0;
         try {
             tokenLoop();
         } finally {
-            out.flush();
+            console.flush();
         }
     }
 

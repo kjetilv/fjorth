@@ -12,10 +12,10 @@ class CompilerTest {
     private final StringWriter output = new StringWriter();
 
     private final Interpreter interpreter =
-        Bootstrap.interpreter(machine, Out.to(output));
+        Bootstrap.interpreter(machine, Console.to(output));
 
     private long[] stackAfter(String line) {
-        interpreter.interpret(line);
+        interpreter.interpretLine(line);
         return machine.stack();
     }
 
@@ -36,9 +36,9 @@ class CompilerTest {
 
     @Test
     void definitionMaySpanLines() {
-        interpreter.interpret(": SQUARE");
-        interpreter.interpret("DUP *");
-        interpreter.interpret("; 6 SQUARE");
+        interpreter.interpretLine(": SQUARE");
+        interpreter.interpretLine("DUP *");
+        interpreter.interpretLine("; 6 SQUARE");
         assertArrayEquals(new long[] {36}, machine.stack());
     }
 
@@ -49,18 +49,18 @@ class CompilerTest {
 
     @Test
     void semicolonOutsideDefinitionFails() {
-        var e = assertThrows(FjorthException.class, () -> interpreter.interpret(";"));
+        var e = assertThrows(FjorthException.class, () -> interpreter.interpretLine(";"));
         assertTrue(e.getMessage().startsWith("; outside definition"));
     }
 
     @Test
     void colonInsideDefinitionFails() {
-        assertThrows(FjorthException.class, () -> interpreter.interpret(": OUTER : INNER"));
+        assertThrows(FjorthException.class, () -> interpreter.interpretLine(": OUTER : INNER"));
     }
 
     @Test
     void colonWithoutNameFails() {
-        assertThrows(FjorthException.class, () -> interpreter.interpret(":"));
+        assertThrows(FjorthException.class, () -> interpreter.interpretLine(":"));
     }
 
     @Test
@@ -85,16 +85,16 @@ class CompilerTest {
 
     @Test
     void immediateWordExecutesDuringCompilation() {
-        interpreter.interpret(": FIVE 5 ; IMMEDIATE");
-        interpreter.interpret(": EMPTY FIVE ;");
+        interpreter.interpretLine(": FIVE 5 ; IMMEDIATE");
+        interpreter.interpretLine(": EMPTY FIVE ;");
         assertArrayEquals(new long[] {5}, machine.stack());
-        interpreter.interpret("EMPTY");
+        interpreter.interpretLine("EMPTY");
         assertArrayEquals(new long[] {5}, machine.stack());
     }
 
     @Test
     void dotQuoteCompilesIntoDefinitions() {
-        interpreter.interpret(": GREET .\" hello\" ; GREET GREET");
+        interpreter.interpretLine(": GREET .\" hello\" ; GREET GREET");
         assertEquals("hellohello", output.toString());
     }
 
@@ -105,9 +105,9 @@ class CompilerTest {
 
     @Test
     void errorRecoveryDiscardsOpenDefinition() {
-        assertThrows(FjorthException.class, () -> interpreter.interpret(": BROKEN frobnicate"));
+        assertThrows(FjorthException.class, () -> interpreter.interpretLine(": BROKEN frobnicate"));
         interpreter.reset();
         assertArrayEquals(new long[] {3}, stackAfter("1 2 +"));
-        assertThrows(FjorthException.class, () -> interpreter.interpret("BROKEN"));
+        assertThrows(FjorthException.class, () -> interpreter.interpretLine("BROKEN"));
     }
 }

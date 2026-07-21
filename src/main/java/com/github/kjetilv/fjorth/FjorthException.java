@@ -2,7 +2,7 @@ package com.github.kjetilv.fjorth;
 
 import module java.base;
 
-public final class FjorthException extends RuntimeException {
+final class FjorthException extends RuntimeException {
 
     private final boolean located;
 
@@ -19,9 +19,11 @@ public final class FjorthException extends RuntimeException {
         if (located) {
             return this;
         }
-        var fjorthException =
-            new FjorthException(getMessage() + "\n" + line + "\n" + " ".repeat(position) + "^", true);
-        fjorthException.setStackTrace(this.getStackTrace());
-        return fjorthException;
+        var locatedException = new FjorthException(
+            getMessage() + "\n" + line + "\n" + " ".repeat(position) + "^",
+            true
+        );
+        locatedException.setStackTrace(this.getStackTrace());
+        return locatedException;
     }
 }

@@ -18,11 +18,11 @@ final class Primitives {
 
     private static final Word DO_RUNTIME = primitive(
         "(do)", interpreter -> {
-            var m = interpreter.machine();
-            var index = m.pop();
-            var limit = m.pop();
-            m.pushReturn(limit);
-            m.pushReturn(slot(index, limit));
+            var machine = interpreter.machine();
+            var index = machine.pop();
+            var limit = machine.pop();
+            machine.pushReturn(limit);
+            machine.pushReturn(slot(index, limit));
         }
     );
 
@@ -32,31 +32,31 @@ final class Primitives {
 
     private static final Word PLUS_LOOP_RUNTIME = primitive(
         "(+loop)", interpreter -> {
-            var m = interpreter.machine();
-            loopStep(m, m.pop());
+            var machine = interpreter.machine();
+            loopStep(machine, machine.pop());
         }
     );
 
     private static final Word QDO_RUNTIME = primitive(
         "(?do)", interpreter -> {
-            var m = interpreter.machine();
-            var index = m.pop();
-            var limit = m.pop();
+            var machine = interpreter.machine();
+            var index = machine.pop();
+            var limit = machine.pop();
             if (limit == index) {
-                m.push(0);
+                machine.push(0);
             } else {
-                m.pushReturn(limit);
-                m.pushReturn(slot(index, limit));
-                m.push(-1);
+                machine.pushReturn(limit);
+                machine.pushReturn(slot(index, limit));
+                machine.push(-1);
             }
         }
     );
 
     private static final Word UNLOOP_RUNTIME = primitive(
         "(unloop)", interpreter -> {
-            var m = interpreter.machine();
-            m.popReturn();
-            m.popReturn();
+            var machine = interpreter.machine();
+            machine.popReturn();
+            machine.popReturn();
         }
     );
 
@@ -64,39 +64,39 @@ final class Primitives {
         return List.of(
             primitive(
                 "DUP", interpreter -> {
-                    var m = interpreter.machine();
-                    m.push(m.peek());
+                    var machine = interpreter.machine();
+                    machine.push(machine.peek());
                 }
             ),
             primitive("DROP", interpreter -> interpreter.machine().pop()),
             primitive(
                 "SWAP", interpreter -> {
-                    var m = interpreter.machine();
-                    var b = m.pop();
-                    var a = m.pop();
-                    m.push(b);
-                    m.push(a);
+                    var machine = interpreter.machine();
+                    var b = machine.pop();
+                    var a = machine.pop();
+                    machine.push(b);
+                    machine.push(a);
                 }
             ),
             primitive(
                 "OVER", interpreter -> {
-                    var m = interpreter.machine();
-                    var b = m.pop();
-                    var a = m.pop();
-                    m.push(a);
-                    m.push(b);
-                    m.push(a);
+                    var machine = interpreter.machine();
+                    var b = machine.pop();
+                    var a = machine.pop();
+                    machine.push(a);
+                    machine.push(b);
+                    machine.push(a);
                 }
             ),
             primitive(
                 "ROT", interpreter -> {
-                    var m = interpreter.machine();
-                    var c = m.pop();
-                    var b = m.pop();
-                    var a = m.pop();
-                    m.push(b);
-                    m.push(c);
-                    m.push(a);
+                    var machine = interpreter.machine();
+                    var c = machine.pop();
+                    var b = machine.pop();
+                    var a = machine.pop();
+                    machine.push(b);
+                    machine.push(c);
+                    machine.push(a);
                 }
             ),
             binary("+", (a, b) -> a + b),
@@ -128,51 +128,51 @@ final class Primitives {
             unary("INVERT", a -> ~a),
             primitive(
                 ">R", interpreter -> {
-                    var m = interpreter.machine();
-                    m.pushReturn(m.pop());
+                    var machine = interpreter.machine();
+                    machine.pushReturn(machine.pop());
                 }
             ),
             primitive(
                 "R>", interpreter -> {
-                    var m = interpreter.machine();
-                    m.push(m.popReturn());
+                    var machine = interpreter.machine();
+                    machine.push(machine.popReturn());
                 }
             ),
             primitive(
                 "R@", interpreter -> {
-                    var m = interpreter.machine();
-                    m.push(m.peekReturn());
+                    var machine = interpreter.machine();
+                    machine.push(machine.peekReturn());
                 }
             ),
             primitive(
                 ".", interpreter -> {
-                    var m = interpreter.machine();
-                    interpreter.print(formatted(m, m.pop()) + " ");
+                    var machine = interpreter.machine();
+                    interpreter.print(formatted(machine, machine.pop()) + " ");
                 }
             ),
             primitive(
                 ".R", interpreter -> {
-                    var m = interpreter.machine();
-                    var width = (int) m.pop();
-                    var text = formatted(m, m.pop());
+                    var machine = interpreter.machine();
+                    var width = (int) machine.pop();
+                    var text = formatted(machine, machine.pop());
                     interpreter.print(" ".repeat(Math.max(0, width - text.length())) + text);
                 }
             ),
             primitive(
                 ".S", interpreter -> {
-                    var m = interpreter.machine();
-                    var stack = m.stack();
+                    var machine = interpreter.machine();
+                    var stack = machine.stack();
                     var text = new StringBuilder("<").append(stack.length).append("> ");
                     for (var value : stack) {
-                        text.append(formatted(m, value)).append(' ');
+                        text.append(formatted(machine, value)).append(' ');
                     }
                     interpreter.print(text.toString());
                 }
             ),
             primitive(
                 "BASE", interpreter -> {
-                    var m = interpreter.machine();
-                    m.push(m.baseAddress());
+                    var machine = interpreter.machine();
+                    machine.push(machine.baseAddress());
                 }
             ),
             primitive(
@@ -193,17 +193,17 @@ final class Primitives {
             immediate(
                 "S\"", interpreter -> {
                     var text = interpreter.readUntil('"');
-                    var m = interpreter.machine();
-                    var address = m.allot(text.length());
+                    var machine = interpreter.machine();
+                    var address = machine.allot(text.length());
                     for (var i = 0; i < text.length(); i++) {
-                        m.store(address + i, text.charAt(i));
+                        machine.store(address + i, text.charAt(i));
                     }
-                    if (m.compiling()) {
+                    if (machine.compiling()) {
                         interpreter.append(Word.literal(address));
                         interpreter.append(Word.literal(text.length()));
                     } else {
-                        m.push(address);
-                        m.push(text.length());
+                        machine.push(address);
+                        machine.push(text.length());
                     }
                 }
             ),
@@ -237,41 +237,41 @@ final class Primitives {
             ),
             primitive(
                 "@", interpreter -> {
-                    var m = interpreter.machine();
-                    m.push(m.fetch(m.pop()));
+                    var machine = interpreter.machine();
+                    machine.push(machine.fetch(machine.pop()));
                 }
             ),
             primitive(
                 "!", interpreter -> {
-                    var m = interpreter.machine();
-                    var address = m.pop();
-                    m.store(address, m.pop());
+                    var machine = interpreter.machine();
+                    var address = machine.pop();
+                    machine.store(address, machine.pop());
                 }
             ),
             primitive(
                 "HERE", interpreter -> {
-                    var m = interpreter.machine();
-                    m.push(m.here());
+                    var machine = interpreter.machine();
+                    machine.push(machine.here());
                 }
             ),
             primitive(
                 "ALLOT", interpreter -> {
-                    var m = interpreter.machine();
-                    m.allot((int) m.pop());
+                    var machine = interpreter.machine();
+                    machine.allot((int) machine.pop());
                 }
             ),
             unary("CELLS", cells -> cells),
             primitive(
                 "+!", interpreter -> {
-                    var m = interpreter.machine();
-                    var address = m.pop();
-                    m.store(address, m.fetch(address) + m.pop());
+                    var machine = interpreter.machine();
+                    var address = machine.pop();
+                    machine.store(address, machine.fetch(address) + machine.pop());
                 }
             ),
             primitive(
                 ",", interpreter -> {
-                    var m = interpreter.machine();
-                    m.store(m.allot(1), m.pop());
+                    var machine = interpreter.machine();
+                    machine.store(machine.allot(1), machine.pop());
                 }
             ),
             primitive(
@@ -290,12 +290,12 @@ final class Primitives {
             ),
             immediate(
                 "ELSE", interpreter -> {
-                    var m = interpreter.machine();
-                    var ifAt = (int) m.pop();
+                    var machine = interpreter.machine();
+                    var ifAt = (int) machine.pop();
                     var elseAt = interpreter.open().size();
                     interpreter.append(Word.branch(-1));
                     interpreter.open().resolve(ifAt, interpreter.open().size());
-                    m.push(elseAt);
+                    machine.push(elseAt);
                 }
             ),
             immediate(
@@ -321,9 +321,9 @@ final class Primitives {
             ),
             immediate(
                 "REPEAT", interpreter -> {
-                    var m = interpreter.machine();
-                    var whileAt = (int) m.pop();
-                    var dest = (int) m.pop();
+                    var machine = interpreter.machine();
+                    var whileAt = (int) machine.pop();
+                    var dest = (int) machine.pop();
                     interpreter.append(Word.branch(dest));
                     interpreter.open().resolve(whileAt, interpreter.open().size());
                 }
@@ -366,14 +366,14 @@ final class Primitives {
             ),
             primitive(
                 "I", interpreter -> {
-                    var m = interpreter.machine();
-                    m.push(index(m.peekReturn(), m.peekReturn(1)));
+                    var machine = interpreter.machine();
+                    machine.push(index(machine.peekReturn(), machine.peekReturn(1)));
                 }
             ),
             primitive(
                 "J", interpreter -> {
-                    var m = interpreter.machine();
-                    m.push(index(m.peekReturn(2), m.peekReturn(3)));
+                    var machine = interpreter.machine();
+                    machine.push(index(machine.peekReturn(2), machine.peekReturn(3)));
                 }
             ),
             primitive(
@@ -432,16 +432,16 @@ final class Primitives {
         };
     }
 
-    private static void loopStep(Machine m, long increment) {
-        var slot = m.popReturn();
+    private static void loopStep(Machine machine, long increment) {
+        var slot = machine.popReturn();
         var next = slot + increment;
         var crossed = ((slot ^ next) & (increment ^ next)) < 0;
         if (crossed) {
-            m.popReturn();
-            m.push(-1);
+            machine.popReturn();
+            machine.push(-1);
         } else {
-            m.pushReturn(next);
-            m.push(0);
+            machine.pushReturn(next);
+            machine.push(0);
         }
     }
 
@@ -478,8 +478,8 @@ final class Primitives {
     private static Word unary(String name, LongUnaryOperator op) {
         return primitive(
             name, interpreter -> {
-                var m = interpreter.machine();
-                m.push(op.applyAsLong(m.pop()));
+                var machine = interpreter.machine();
+                machine.push(op.applyAsLong(machine.pop()));
             }
         );
     }
@@ -487,10 +487,10 @@ final class Primitives {
     private static Word binary(String name, LongBinaryOperator op) {
         return primitive(
             name, interpreter -> {
-                var m = interpreter.machine();
-                var b = m.pop();
-                var a = m.pop();
-                m.push(op.applyAsLong(a, b));
+                var machine = interpreter.machine();
+                var b = machine.pop();
+                var a = machine.pop();
+                machine.push(op.applyAsLong(a, b));
             }
         );
     }

@@ -2,18 +2,18 @@ package com.github.kjetilv.fjorth;
 
 import module java.base;
 
-public interface Out {
+public interface Console {
 
-    static Out std() {
-        return new Stdout();
+    static Console stdout() {
+        return new PrintWriterConsole(System.out);
     }
 
-    static Out to(PrintWriter output) {
-        return new Stdout(output);
+    static Console to(PrintWriter output) {
+        return new PrintWriterConsole(output);
     }
 
-    static Out to(StringWriter output) {
-        return new Stdout(output);
+    static Console to(StringWriter output) {
+        return new PrintWriterConsole(output);
     }
 
     default void println(String s) {

@@ -74,7 +74,7 @@ JAVA_HOME=~/.sdkman/candidates/java/25.0.3-graal ./gradlew nativeCompile
   `out()`.
 - **`Out`** — output abstraction. `Out.std()` (System.out), `Out.to(StringWriter)`
   (tests). `print(String)`, `print(char)`, `println`, `flush`. Implemented by
-  package-private `Stdout` (PrintWriter-backed; `flush()` throws
+  package-private `PrintWriterConsole` (PrintWriter-backed; `flush()` throws
   IllegalStateException on writer error).
 - **`FjorthException`** — runtime error carrying a message; package-private
   constructor. `locate(line, position)` appends `\n<line>\n<spaces>^` caret

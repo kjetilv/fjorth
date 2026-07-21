@@ -12,10 +12,10 @@ class PolishTest {
     private final StringWriter output = new StringWriter();
 
     private final Interpreter interpreter =
-        Bootstrap.interpreter(machine, Out.to(output));
+        Bootstrap.interpreter(machine, Console.to(output));
 
     private long[] stackAfter(String line) {
-        interpreter.interpret(line);
+        interpreter.interpretLine(line);
         return machine.stack();
     }
 
@@ -37,7 +37,7 @@ class PolishTest {
 
     @Test
     void spacesEmitsBlanks() {
-        interpreter.interpret("3 SPACES");
+        interpreter.interpretLine("3 SPACES");
         assertEquals("   ", output.toString());
     }
 
@@ -48,8 +48,8 @@ class PolishTest {
 
     @Test
     void wordsListsDictionaryWithoutDuplicates() {
-        interpreter.interpret(": X 1 ; : X 2 ;");
-        interpreter.interpret("WORDS");
+        interpreter.interpretLine(": X 1 ; : X 2 ;");
+        interpreter.interpretLine("WORDS");
         var listed = output.toString();
         assertTrue(listed.contains("DUP"));
         assertTrue(listed.contains("2DUP"));
@@ -58,25 +58,25 @@ class PolishTest {
 
     @Test
     void seeRendersSimpleDefinitionOnOneLine() {
-        interpreter.interpret(": SQUARE DUP * ; SEE SQUARE");
+        interpreter.interpretLine(": SQUARE DUP * ; SEE SQUARE");
         assertEquals(": SQUARE DUP * ;\n", output.toString());
     }
 
     @Test
     void seeRendersLiterals() {
-        interpreter.interpret(": TEN 10 ; SEE TEN");
+        interpreter.interpretLine(": TEN 10 ; SEE TEN");
         assertEquals(": TEN 10 ;\n", output.toString());
     }
 
     @Test
     void seeMarksImmediateWords() {
-        interpreter.interpret(": M 1 ; IMMEDIATE SEE M");
+        interpreter.interpretLine(": M 1 ; IMMEDIATE SEE M");
         assertEquals(": M 1 ; IMMEDIATE\n", output.toString());
     }
 
     @Test
     void seeRendersBranchesWithIndices() {
-        interpreter.interpret(": SIGN 0 < IF -1 ELSE 1 THEN ; SEE SIGN");
+        interpreter.interpretLine(": SIGN 0 < IF -1 ELSE 1 THEN ; SEE SIGN");
         var rendered = output.toString();
         assertTrue(rendered.startsWith(": SIGN\n"));
         assertTrue(rendered.contains("0branch -> "));
@@ -87,26 +87,26 @@ class PolishTest {
 
     @Test
     void seeRendersExit() {
-        interpreter.interpret(": F 1 EXIT 2 ; SEE F");
+        interpreter.interpretLine(": F 1 EXIT 2 ; SEE F");
         assertTrue(output.toString().contains("exit"));
     }
 
     @Test
     void seeOnPrimitive() {
-        interpreter.interpret("SEE DUP");
+        interpreter.interpretLine("SEE DUP");
         assertEquals("DUP ( primitive )\n", output.toString());
     }
 
     @Test
     void seeUnknownWordFails() {
-        assertThrows(FjorthException.class, () -> interpreter.interpret("SEE FROBNICATE"));
+        assertThrows(FjorthException.class, () -> interpreter.interpretLine("SEE FROBNICATE"));
     }
 
     @Test
     void errorsCarryInputPositionContext() {
         var e = assertThrows(
             FjorthException.class,
-            () -> interpreter.interpret("1 2 frobnicate")
+            () -> interpreter.interpretLine("1 2 frobnicate")
         );
         assertEquals("frobnicate ?\n1 2 frobnicate\n    ^", e.getMessage());
     }
@@ -115,7 +115,7 @@ class PolishTest {
     void errorPositionPointsAtFailingWordNotLineStart() {
         var e = assertThrows(
             FjorthException.class,
-            () -> interpreter.interpret("1 0 /")
+            () -> interpreter.interpretLine("1 0 /")
         );
         assertEquals("division by zero\n1 0 /\n    ^", e.getMessage());
     }

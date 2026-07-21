@@ -3,37 +3,28 @@ package com.github.kjetilv.fjorth;
 public interface Fjorth {
 
     static Fjorth getDefault() {
-        return getDefault((Out) null);
+        return getDefault((Console) null);
     }
 
-    static Fjorth getDefault(Out std) {
+    static Fjorth getDefault(Console std) {
         return Bootstrap.interpreter(
             new Machine(),
-            std == null ? Out.std() : std
+            std == null ? Console.stdout() : std
         );
     }
 
-    Result eval(String line);
+    Result interpret(String line);
 
     void reset();
 
-    Out out();
+    Console console();
 
-    sealed interface Result extends AutoCloseable {
-
-        @Override
-        default void close() {
-        }
+    sealed interface Result {
 
         record OK() implements Result {
         }
 
-        record Failed(String message, Runnable closer) implements Result {
-
-            @Override
-            public void close() {
-                closer.run();
-            }
+        record Failed(String message) implements Result {
         }
     }
 }

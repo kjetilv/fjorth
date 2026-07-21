@@ -12,15 +12,15 @@ class InterpreterTest {
     private final StringWriter output = new StringWriter();
 
     private final Interpreter interpreter =
-        Bootstrap.interpreter(machine, Out.to(output));
+        Bootstrap.interpreter(machine, Console.to(output));
 
     private long[] stackAfter(String line) {
-        interpreter.interpret(line);
+        interpreter.interpretLine(line);
         return machine.stack();
     }
 
     private String outputOf(String line) {
-        interpreter.interpret(line);
+        interpreter.interpretLine(line);
         return output.toString();
     }
 
@@ -31,7 +31,7 @@ class InterpreterTest {
 
     @Test
     void unknownWordFails() {
-        var e = assertThrows(FjorthException.class, () -> interpreter.interpret("frobnicate"));
+        var e = assertThrows(FjorthException.class, () -> interpreter.interpretLine("frobnicate"));
         assertTrue(e.getMessage().startsWith("frobnicate ?"));
     }
 
@@ -45,9 +45,9 @@ class InterpreterTest {
 
     @Test
     void divisionByZeroFails() {
-        assertThrows(FjorthException.class, () -> interpreter.interpret("1 0 /"));
+        assertThrows(FjorthException.class, () -> interpreter.interpretLine("1 0 /"));
         machine.reset();
-        assertThrows(FjorthException.class, () -> interpreter.interpret("1 0 MOD"));
+        assertThrows(FjorthException.class, () -> interpreter.interpretLine("1 0 MOD"));
     }
 
     @Test
@@ -135,8 +135,8 @@ class InterpreterTest {
 
     @Test
     void stateSurvivesAcrossLines() {
-        interpreter.interpret("1 2");
-        interpreter.interpret("+");
+        interpreter.interpretLine("1 2");
+        interpreter.interpretLine("+");
         assertArrayEquals(new long[] {3}, machine.stack());
     }
 }
