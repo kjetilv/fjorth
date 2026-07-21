@@ -4,13 +4,8 @@ import module java.base;
 
 final class Primitives {
 
-    static Dictionary dictionary() {
-        return words().stream()
-            .reduce(
-                Dictionary.EMPTY,
-                Dictionary::define,
-                (_, second) -> second
-            );
+    static Dictionary unsealedDictionary() {
+        return Dictionary.of(words());
     }
 
     private Primitives() {
@@ -217,10 +212,10 @@ final class Primitives {
                     interpreter.evaluate(poppedString(interpreter.machine()))
             ),
             immediate("(", interpreter -> interpreter.readUntil(')')),
-            immediate("\\", Interpreter::readRestOfLine),
+            immediate("\\", InterpreterImpl::readRestOfLine),
             primitive(":", interpreter -> interpreter.beginDefinition(interpreter.word(":"))),
-            immediate(";", Interpreter::endDefinition),
-            primitive("IMMEDIATE", Interpreter::makeLatestImmediate),
+            immediate(";", InterpreterImpl::endDefinition),
+            primitive("IMMEDIATE", InterpreterImpl::makeLatestImmediate),
             immediate("DOES>", interpreter -> interpreter.open().beginTail()),
             primitive(
                 "CONSTANT", interpreter -> {
@@ -433,7 +428,7 @@ final class Primitives {
         };
     }
 
-    private static void loopStep(Machine machine, long increment) {
+    private static void loopStep(MachineImpl machine, long increment) {
         var slot = machine.popReturn();
         var next = slot + increment;
         var crossed = ((slot ^ next) & (increment ^ next)) < 0;
@@ -458,7 +453,7 @@ final class Primitives {
         return slot + limit + Long.MIN_VALUE;
     }
 
-    private static void closeLoop(Interpreter interpreter, Word runtime) {
+    private static void closeLoop(InterpreterImpl interpreter, Word runtime) {
         var open = interpreter.open();
         var leaves = open.endLoop();
         var dest = (int) interpreter.machine().pop();
@@ -500,11 +495,11 @@ final class Primitives {
         return value ? -1 : 0;
     }
 
-    private static String formatted(Machine m, long value) {
+    private static String formatted(MachineImpl m, long value) {
         return Long.toString(value, m.base()).toUpperCase();
     }
 
-    private static String poppedString(Machine m) {
+    private static String poppedString(MachineImpl m) {
         var length = m.pop();
         var address = m.pop();
         var text = new StringBuilder();

@@ -66,7 +66,7 @@ JAVA_HOME=~/.sdkman/candidates/java/25.0.3-graal ./gradlew nativeCompile
 
 ### Public API (3 types; everything else package-private)
 
-- **`Fjorth`** — the facade interface. `static getDefault()` /
+- **`Interpreter`** — the facade interface. `static getDefault()` /
   `getDefault(Out)` build a bootstrapped instance. `eval(String)` returns a
   sealed `Result` (`OK` | `Failed(message, closer)`); `Result` is
   `AutoCloseable`, and `Failed.close()` runs its closer — the REPL uses
@@ -133,7 +133,7 @@ auto-resets via its closer). Behavior (user-implemented):
   the whole Definition). `seal()` validates (no unterminated DO, no branch
   target < 0 in body OR tail), appends the `(does>)` retrofit word if a tail
   exists, and returns the immutable `Word.Colon`.
-- **`Interpreter`** — implements `Fjorth`; outer interpreter + executor. Holds
+- **`InterpreterImpl`** — implements `Interpreter`; outer interpreter + executor. Holds
   Machine, mutable Dictionary head, Out, current Definition, tokenizer state
   (`input`/`pos`/`tokenStart`).
   - `eval(line)`: `interpret` + catch → `Result.Failed(message, this::reset)`.
@@ -159,12 +159,6 @@ auto-resets via its closer). Behavior (user-implemented):
   pops b then a, pushes op(a,b)), `flag(boolean)` → -1/0, `formatted(m, value)`
   (BASE-aware, uppercase), `poppedString(m)` (addr+len cell string, shared by
   TYPE/EVALUATE). SEE rendering in `render`/`renderColon`/`cell`.
-- **`Bootstrap`** — `interpreter(Machine, Out)` builds an Interpreter over
-  `Primitives.dictionary()` and interprets each line of `fjorth.fs`, loaded
-  from the CLASSPATH ROOT via the context classloader
-  (`src/main/resources/fjorth.fs` — NOT under the package directory). All test
-  fixtures and `Fjorth.getDefault` go through this, so the whole suite
-  validates the bootstrap.
 
 ## Word inventory
 
@@ -244,7 +238,7 @@ about what the latest word is (ANS restricts to CREATEd; not enforced).
 ## Tests (src/test/java/com/github/kjetilv/fjorth/, 141 total)
 
 `MachineTest`, `DictionaryTest` (construct core types directly);
-`InterpreterTest`, `CompilerTest`, `ControlFlowTest`, `MemoryTest`,
+`InterpreterImplTest`, `CompilerTest`, `ControlFlowTest`, `MemoryTest`,
 `PolishTest`, `StringNumberTest`, `DoesTest`, `EvaluateTest` — all use the
 fixture: fields `Machine machine`, `StringWriter output`,
 `Interpreter interpreter = Bootstrap.interpreter(machine, Out.to(output))`,

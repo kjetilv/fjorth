@@ -7,17 +7,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class EvaluateTest {
 
-    private final Machine machine = new Machine();
-
     private final StringWriter output = new StringWriter();
 
-    private final Interpreter interpreter =
-        Bootstrap.interpreter(machine, Console.to(output));
+    private final MachineImpl machine = new MachineImpl();
 
-    private long[] stackAfter(String line) {
-        interpreter.interpretLine(line);
-        return machine.stack();
-    }
+    private final Interpreter interpreter = machine.interpreter(Console.to(output));
 
     @Test
     void evaluatesArithmetic() {
@@ -31,28 +25,28 @@ class EvaluateTest {
 
     @Test
     void evaluateInsideColonDefinition() {
-        interpreter.interpretLine(": RUN S\" 4 5 *\" EVALUATE ;");
+        interpreter.interpret(": RUN S\" 4 5 *\" EVALUATE ;");
         assertArrayEquals(new long[] {20}, stackAfter("RUN"));
     }
 
     @Test
     void evaluateCanDefineWords() {
-        interpreter.interpretLine("S\" : SQ DUP * ;\" EVALUATE");
+        interpreter.interpret("S\" : SQ DUP * ;\" EVALUATE");
         assertArrayEquals(new long[] {36}, stackAfter("6 SQ"));
     }
 
     @Test
     void nestedEvaluate() {
-        interpreter.interpretLine(": INNER S\" 2 3 +\" EVALUATE ;");
-        interpreter.interpretLine(": OUTER S\" INNER 10 *\" EVALUATE ;");
+        interpreter.interpret(": INNER S\" 2 3 +\" EVALUATE ;");
+        interpreter.interpret(": OUTER S\" INNER 10 *\" EVALUATE ;");
         assertArrayEquals(new long[] {50}, stackAfter("OUTER"));
     }
 
     @Test
     void compileStateStartedInsideEvaluatePersists() {
-        interpreter.interpretLine("S\" : ANSWER\" EVALUATE");
+        interpreter.interpret("S\" : ANSWER\" EVALUATE");
         assertTrue(machine.compiling());
-        interpreter.interpretLine("42 ;");
+        interpreter.interpret("42 ;");
         assertArrayEquals(new long[] {42}, stackAfter("ANSWER"));
     }
 
@@ -63,10 +57,15 @@ class EvaluateTest {
 
     @Test
     void errorIsLocatedInTheEvaluatedText() {
-        var e = assertThrows(
-            FjorthException.class,
-            () -> interpreter.interpretLine("S\" 1 frobnicate\" EVALUATE")
+        var failed = assertInstanceOf(
+            Interpreter.Result.Failed.class,
+            interpreter.interpret("S\" 1 frobnicate\" EVALUATE")
         );
-        assertEquals("frobnicate ?\n1 frobnicate\n  ^", e.getMessage());
+        assertEquals("frobnicate ?\n1 frobnicate\n  ^", failed.message());
+    }
+
+    private long[] stackAfter(String line) {
+        interpreter.interpret(line);
+        return machine.stack();
     }
 }

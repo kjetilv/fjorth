@@ -9,7 +9,7 @@ class MachineTest {
 
     @Test
     void pushAndPopAreLifo() {
-        var machine = new Machine();
+        var machine = new MachineImpl();
         machine.push(1);
         machine.push(2);
         machine.push(3);
@@ -21,7 +21,7 @@ class MachineTest {
 
     @Test
     void peekDoesNotConsume() {
-        var machine = new Machine();
+        var machine = new MachineImpl();
         machine.push(42);
         assertEquals(42, machine.peek());
         assertEquals(1, machine.depth());
@@ -30,20 +30,20 @@ class MachineTest {
 
     @Test
     void popOnEmptyStackUnderflows() {
-        var machine = new Machine();
+        var machine = new MachineImpl();
         var e = assertThrows(FjorthException.class, machine::pop);
         assertEquals("stack underflow", e.getMessage());
     }
 
     @Test
     void peekOnEmptyStackUnderflows() {
-        var machine = new Machine();
+        var machine = new MachineImpl();
         assertThrows(FjorthException.class, machine::peek);
     }
 
     @Test
     void pushBeyondCapacityOverflows() {
-        var machine = new Machine(2, 2);
+        var machine = new MachineImpl(2, 2);
         machine.push(1);
         machine.push(2);
         var e = assertThrows(FjorthException.class, () -> machine.push(3));
@@ -52,7 +52,7 @@ class MachineTest {
 
     @Test
     void returnStackIsIndependentOfDataStack() {
-        var machine = new Machine();
+        var machine = new MachineImpl();
         machine.push(1);
         machine.pushReturn(2);
         assertEquals(1, machine.depth());
@@ -63,14 +63,14 @@ class MachineTest {
 
     @Test
     void returnStackUnderflows() {
-        var machine = new Machine();
+        var machine = new MachineImpl();
         var e = assertThrows(FjorthException.class, machine::popReturn);
         assertEquals("return stack underflow", e.getMessage());
     }
 
     @Test
     void returnStackOverflows() {
-        var machine = new Machine(2, 1);
+        var machine = new MachineImpl(2, 1);
         machine.pushReturn(1);
         var e = assertThrows(FjorthException.class, () -> machine.pushReturn(2));
         assertEquals("return stack overflow", e.getMessage());
@@ -78,7 +78,7 @@ class MachineTest {
 
     @Test
     void stackReturnsContentsBottomFirst() {
-        var machine = new Machine();
+        var machine = new MachineImpl();
         machine.push(1);
         machine.push(2);
         machine.push(3);
@@ -87,7 +87,7 @@ class MachineTest {
 
     @Test
     void memoryStoreAndFetchRoundTrip() {
-        var machine = new Machine();
+        var machine = new MachineImpl();
         var address = machine.allot(1);
         machine.store(address, 42);
         assertEquals(42, machine.fetch(address));
@@ -95,7 +95,7 @@ class MachineTest {
 
     @Test
     void allotAdvancesHere() {
-        var machine = new Machine();
+        var machine = new MachineImpl();
         var first = machine.allot(2);
         var second = machine.allot(1);
         assertEquals(first + 2, second);
@@ -104,14 +104,14 @@ class MachineTest {
 
     @Test
     void allotBeyondMemoryFails() {
-        var machine = new Machine(2, 2, 4);
+        var machine = new MachineImpl(2, 2, 4);
         machine.allot(3);
         assertThrows(FjorthException.class, () -> machine.allot(1));
     }
 
     @Test
     void baseCellIsReservedAndInitializedToDecimal() {
-        var machine = new Machine();
+        var machine = new MachineImpl();
         assertEquals(10, machine.base());
         assertEquals(10, machine.fetch(machine.baseAddress()));
         machine.store(machine.baseAddress(), 16);
@@ -122,14 +122,14 @@ class MachineTest {
 
     @Test
     void fetchOutOfBoundsFails() {
-        var machine = new Machine();
+        var machine = new MachineImpl();
         assertThrows(FjorthException.class, () -> machine.fetch(-1));
         assertThrows(FjorthException.class, () -> machine.store(1_000_000, 1));
     }
 
     @Test
     void resetClearsStacksAndState() {
-        var machine = new Machine();
+        var machine = new MachineImpl();
         machine.push(1);
         machine.pushReturn(2);
         machine.compiling(true);

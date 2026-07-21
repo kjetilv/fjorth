@@ -85,6 +85,6 @@ sealed interface Word {
     interface Effect {
 
         @SuppressWarnings("ClassEscapesDefinedScope")
-        void apply(Interpreter interpreter);
+        void apply(InterpreterImpl interpreter);
     }
 }

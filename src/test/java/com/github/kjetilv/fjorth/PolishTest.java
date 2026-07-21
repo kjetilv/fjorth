@@ -7,17 +7,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class PolishTest {
 
-    private final Machine machine = new Machine();
-
     private final StringWriter output = new StringWriter();
 
-    private final Interpreter interpreter =
-        Bootstrap.interpreter(machine, Console.to(output));
+    private final MachineImpl machine = new MachineImpl();
 
-    private long[] stackAfter(String line) {
-        interpreter.interpretLine(line);
-        return machine.stack();
-    }
+    private final Interpreter interpreter = machine.interpreter(Console.to(output));
 
     @Test
     void bootstrappedWordsWork() {
@@ -37,7 +31,7 @@ class PolishTest {
 
     @Test
     void spacesEmitsBlanks() {
-        interpreter.interpretLine("3 SPACES");
+        interpreter.interpret("3 SPACES");
         assertEquals("   ", output.toString());
     }
 
@@ -48,8 +42,8 @@ class PolishTest {
 
     @Test
     void wordsListsDictionaryWithoutDuplicates() {
-        interpreter.interpretLine(": X 1 ; : X 2 ;");
-        interpreter.interpretLine("WORDS");
+        interpreter.interpret(": X 1 ; : X 2 ;");
+        interpreter.interpret("WORDS");
         var listed = output.toString();
         assertTrue(listed.contains("DUP"));
         assertTrue(listed.contains("2DUP"));
@@ -58,25 +52,25 @@ class PolishTest {
 
     @Test
     void seeRendersSimpleDefinitionOnOneLine() {
-        interpreter.interpretLine(": SQUARE DUP * ; SEE SQUARE");
+        interpreter.interpret(": SQUARE DUP * ; SEE SQUARE");
         assertEquals(": SQUARE DUP * ;\n", output.toString());
     }
 
     @Test
     void seeRendersLiterals() {
-        interpreter.interpretLine(": TEN 10 ; SEE TEN");
+        interpreter.interpret(": TEN 10 ; SEE TEN");
         assertEquals(": TEN 10 ;\n", output.toString());
     }
 
     @Test
     void seeMarksImmediateWords() {
-        interpreter.interpretLine(": M 1 ; IMMEDIATE SEE M");
+        interpreter.interpret(": M 1 ; IMMEDIATE SEE M");
         assertEquals(": M 1 ; IMMEDIATE\n", output.toString());
     }
 
     @Test
     void seeRendersBranchesWithIndices() {
-        interpreter.interpretLine(": SIGN 0 < IF -1 ELSE 1 THEN ; SEE SIGN");
+        interpreter.interpret(": SIGN 0 < IF -1 ELSE 1 THEN ; SEE SIGN");
         var rendered = output.toString();
         assertTrue(rendered.startsWith(": SIGN\n"));
         assertTrue(rendered.contains("0branch -> "));
@@ -87,36 +81,35 @@ class PolishTest {
 
     @Test
     void seeRendersExit() {
-        interpreter.interpretLine(": F 1 EXIT 2 ; SEE F");
+        interpreter.interpret(": F 1 EXIT 2 ; SEE F");
         assertTrue(output.toString().contains("exit"));
     }
 
     @Test
     void seeOnPrimitive() {
-        interpreter.interpretLine("SEE DUP");
+        interpreter.interpret("SEE DUP");
         assertEquals("DUP ( primitive )\n", output.toString());
     }
 
     @Test
     void seeUnknownWordFails() {
-        assertThrows(FjorthException.class, () -> interpreter.interpretLine("SEE FROBNICATE"));
+        assertInstanceOf(Interpreter.Result.Failed.class, interpreter.interpret("SEE FROBNICATE"));
     }
 
     @Test
     void errorsCarryInputPositionContext() {
-        var e = assertThrows(
-            FjorthException.class,
-            () -> interpreter.interpretLine("1 2 frobnicate")
-        );
-        assertEquals("frobnicate ?\n1 2 frobnicate\n    ^", e.getMessage());
+        var failed = assertInstanceOf(Interpreter.Result.Failed.class, interpreter.interpret("1 2 frobnicate"));
+        assertEquals("frobnicate ?\n1 2 frobnicate\n    ^", failed.message());
     }
 
     @Test
     void errorPositionPointsAtFailingWordNotLineStart() {
-        var e = assertThrows(
-            FjorthException.class,
-            () -> interpreter.interpretLine("1 0 /")
-        );
-        assertEquals("division by zero\n1 0 /\n    ^", e.getMessage());
+        var failed = assertInstanceOf(Interpreter.Result.Failed.class, interpreter.interpret("1 0 /"));
+        assertEquals("division by zero\n1 0 /\n    ^", failed.message());
+    }
+
+    private long[] stackAfter(String line) {
+        interpreter.interpret(line);
+        return machine.stack();
     }
 }

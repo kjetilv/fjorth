@@ -46,11 +46,11 @@ structural sharing.
 - The "definition under construction" reference planned for `Machine` was deferred
   to Phase 3, where its actual shape (name + mutable accumulator) is determined by
   the compiler. Adding it in Phase 1 would have been speculative. It ended up on
-  `Interpreter`, not `Machine` — see Phase 3.
+  `InterpreterImpl`, not `Machine` — see Phase 3.
 
 ## Phase 2 — Outer interpreter + primitives
 
-**Executed.** `Interpreter` (stateful per-line tokenizer, lookup → execute → number
+**Executed.** `InterpreterImpl` (stateful per-line tokenizer, lookup → execute → number
 fallback), `Primitives` (34 words as a `List<Word>` reduced onto an empty
 dictionary, with `unary`/`binary` combinators), `Repl` (line loop, ` ok`, error
 recovery). Verified end-to-end with a piped REPL session.
@@ -108,7 +108,7 @@ Definitions may span lines.
 
 - Memory substrate (`long[]` cells, `allot`, `fetch`/`store`, `@`, `!`) pulled
   forward from Phase 5, for the reason above. PLAN.md was updated at the time.
-- The definition-under-construction lives on `Interpreter` (which owns the
+- The definition-under-construction lives on `InterpreterImpl` (which owns the
   dictionary), not on `Machine` as Phase 1 originally sketched. Only the boolean
   STATE flag is on `Machine`.
 
@@ -393,7 +393,7 @@ aligning versions, exactly as the error's own "update dependencies" hint says.
   execution case to be handled when first written, which is why the Phase 2 executor
   was already Phase 4-ready and Phase 4's 20 tests passed on the first run.
 - **Mutability stayed confined** to `Machine` (inherently stateful), the open
-  `Definition`, and the `Interpreter`'s dictionary head reference. Everything
+  `Definition`, and the `InterpreterImpl`'s dictionary head reference. Everything
   published — words, bodies, dictionary nodes — is immutable, per the original
   design constraint.
 - **Every implementation-side test failure across all phases (2 of 2) was a wrong

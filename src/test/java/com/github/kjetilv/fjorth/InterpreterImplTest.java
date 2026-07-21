@@ -5,24 +5,13 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class InterpreterTest {
-
-    private final Machine machine = new Machine();
+class InterpreterImplTest {
 
     private final StringWriter output = new StringWriter();
 
-    private final Interpreter interpreter =
-        Bootstrap.interpreter(machine, Console.to(output));
+    private final MachineImpl machine = new MachineImpl();
 
-    private long[] stackAfter(String line) {
-        interpreter.interpretLine(line);
-        return machine.stack();
-    }
-
-    private String outputOf(String line) {
-        interpreter.interpretLine(line);
-        return output.toString();
-    }
+    private final Interpreter interpreter = machine.interpreter(Console.to(output));
 
     @Test
     void numbersArePushed() {
@@ -31,8 +20,8 @@ class InterpreterTest {
 
     @Test
     void unknownWordFails() {
-        var e = assertThrows(FjorthException.class, () -> interpreter.interpretLine("frobnicate"));
-        assertTrue(e.getMessage().startsWith("frobnicate ?"));
+        var failed = assertInstanceOf(Interpreter.Result.Failed.class, interpreter.interpret("frobnicate"));
+        assertTrue(failed.message().startsWith("frobnicate ?"));
     }
 
     @Test
@@ -45,9 +34,9 @@ class InterpreterTest {
 
     @Test
     void divisionByZeroFails() {
-        assertThrows(FjorthException.class, () -> interpreter.interpretLine("1 0 /"));
+        assertInstanceOf(Interpreter.Result.Failed.class, interpreter.interpret("1 0 /"));
         machine.reset();
-        assertThrows(FjorthException.class, () -> interpreter.interpretLine("1 0 MOD"));
+        assertInstanceOf(Interpreter.Result.Failed.class, interpreter.interpret("1 0 MOD"));
     }
 
     @Test
@@ -135,8 +124,18 @@ class InterpreterTest {
 
     @Test
     void stateSurvivesAcrossLines() {
-        interpreter.interpretLine("1 2");
-        interpreter.interpretLine("+");
+        interpreter.interpret("1 2");
+        interpreter.interpret("+");
         assertArrayEquals(new long[] {3}, machine.stack());
+    }
+
+    private long[] stackAfter(String line) {
+        interpreter.interpret(line);
+        return machine.stack();
+    }
+
+    private String outputOf(String line) {
+        interpreter.interpret(line);
+        return output.toString();
     }
 }

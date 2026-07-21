@@ -1,5 +1,6 @@
 import com.github.kjetilv.fjorth.Console;
-import com.github.kjetilv.fjorth.Fjorth;
+import com.github.kjetilv.fjorth.Interpreter;
+import com.github.kjetilv.fjorth.Machine;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -60,12 +61,12 @@ private Stream<String> error(Object source, String line, int[] ln) {
 
 @SuppressWarnings("MethodMayBeStatic")
 private boolean evaluate(String line) {
-    return switch (FJORTH.interpret(line)) {
-        case Fjorth.Result.OK _ -> {
+    return switch (INTERPRETER.interpret(line)) {
+        case Interpreter.Result.OK _ -> {
             CONSOLE.println(" ok");
             yield true;
         }
-        case Fjorth.Result.Failed(var message) -> {
+        case Interpreter.Result.Failed(var message) -> {
             CONSOLE.println();
             CONSOLE.println(message);
             yield false;
@@ -73,9 +74,11 @@ private boolean evaluate(String line) {
     };
 }
 
-private static final Fjorth FJORTH = Fjorth.getDefault();
+private static final Machine machine = Machine.create();
 
-private static final Console CONSOLE = FJORTH.console();
+private static final Interpreter INTERPRETER = machine.interpreter();
+
+private static final Console CONSOLE = INTERPRETER.console();
 
 private static BufferedReader stdin() {
     return new BufferedReader(new InputStreamReader(System.in));
