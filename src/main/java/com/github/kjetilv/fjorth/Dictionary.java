@@ -27,16 +27,7 @@ final class Dictionary {
     ) {
         this(
             parent,
-            words == null ? null
-                : words.stream()
-                    .collect(Collectors.toMap(
-                        w -> lc(w.name()),
-                        Function.identity(),
-                        (w1, w2) -> {
-                            throw new IllegalStateException(w1 + " / " + w2);
-                        },
-                        LinkedHashMap::new
-                    )),
+            words == null ? null : toMap(words),
             word,
             word instanceof Word.Primitive(var name, var _, var _) ? lc(name)
                 : word instanceof Word.Colon(var name, var _, var _) ? lc(name)
@@ -111,6 +102,18 @@ final class Dictionary {
     }
 
     static final Dictionary EMPTY = new Dictionary(null, null, null);
+
+    private static LinkedHashMap<String, Word> toMap(List<Word> words) {
+        return words.stream()
+            .collect(Collectors.toMap(
+                w -> lc(w.name()),
+                Function.identity(),
+                (w1, w2) -> {
+                    throw new IllegalStateException(w1 + " / " + w2);
+                },
+                LinkedHashMap::new
+            ));
+    }
 
     private static String lc(String name) {
         return name.toLowerCase(Locale.ROOT);

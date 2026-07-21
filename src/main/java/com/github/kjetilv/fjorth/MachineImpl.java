@@ -21,17 +21,17 @@ public final class MachineImpl implements Machine {
     private boolean compiling;
 
     MachineImpl() {
-        this(DEFAULT_STACK_SIZE, DEFAULT_STACK_SIZE);
+        this(-1, -1);
     }
 
     MachineImpl(int dataStackSize, int returnStackSize) {
-        this(dataStackSize, returnStackSize, DEFAULT_MEMORY_CELLS);
+        this(dataStackSize, returnStackSize, -1);
     }
 
     MachineImpl(int dataStackSize, int returnStackSize, int memoryCells) {
-        this.data = new long[dataStackSize];
-        this.returns = new long[returnStackSize];
-        this.memory = new long[memoryCells];
+        this.data = new long[dataStackSize > 0 ? dataStackSize : DEFAULT_STACK_SIZE];
+        this.returns = new long[returnStackSize > 0 ? returnStackSize : DEFAULT_STACK_SIZE];
+        this.memory = new long[memoryCells > 0 ? memoryCells : DEFAULT_MEMORY_CELLS];
         this.baseAddress = allot(1);
         store(baseAddress, 10);
     }
