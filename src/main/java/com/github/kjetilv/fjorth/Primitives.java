@@ -61,6 +61,7 @@ final class Primitives {
     );
 
     private static List<Word> words() {
+        //noinspection Convert2MethodRef
         return List.of(
             primitive(
                 "DUP", interpreter -> {
