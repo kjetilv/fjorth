@@ -1,5 +1,7 @@
 import com.github.kjetilv.fjorth.Console;
 import com.github.kjetilv.fjorth.Interpreter;
+import com.github.kjetilv.fjorth.Interpreter.Result.Failed;
+import com.github.kjetilv.fjorth.Interpreter.Result.OK;
 import com.github.kjetilv.fjorth.Machine;
 
 import java.io.BufferedReader;
@@ -62,11 +64,11 @@ private Stream<String> error(Object source, String line, int[] ln) {
 @SuppressWarnings("MethodMayBeStatic")
 private boolean evaluate(String line) {
     return switch (INTERPRETER.interpret(line)) {
-        case Interpreter.Result.OK _ -> {
+        case OK _ -> {
             CONSOLE.println(" ok");
             yield true;
         }
-        case Interpreter.Result.Failed(var message) -> {
+        case Failed(var message) -> {
             CONSOLE.println();
             CONSOLE.println(message);
             yield false;

@@ -1,6 +1,7 @@
 package com.github.kjetilv.fjorth;
 
 import module java.base;
+import com.github.kjetilv.fjorth.Interpreter.Result.Failed;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -61,13 +62,13 @@ class DoesTest {
 
     @Test
     void doesOutsideDefinitionFails() {
-        assertInstanceOf(Interpreter.Result.Failed.class, interpreter.interpret("DOES>"));
+        assertInstanceOf(Failed.class, interpreter.interpret("DOES>"));
     }
 
     @Test
     void multipleDoesFails() {
         var failed = assertInstanceOf(
-            Interpreter.Result.Failed.class,
+            Failed.class,
             interpreter.interpret(": BAD CREATE DOES> @ DOES> @ ;")
         );
         assertTrue(failed.message().startsWith("multiple DOES>"));
@@ -76,7 +77,7 @@ class DoesTest {
     @Test
     void unresolvedBranchInTailFails() {
         var failed = assertInstanceOf(
-            Interpreter.Result.Failed.class,
+            Failed.class,
             interpreter.interpret(": BAD CREATE DOES> IF ;")
         );
         assertTrue(failed.message().startsWith("unresolved branch"));

@@ -1,6 +1,7 @@
 package com.github.kjetilv.fjorth;
 
 import module java.base;
+import com.github.kjetilv.fjorth.Interpreter.Result.Failed;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -44,14 +45,14 @@ class StringNumberTest {
     @Test
     void unknownTokenInHexStillFails() {
         interpreter.interpret("HEX");
-        assertInstanceOf(Interpreter.Result.Failed.class, interpreter.interpret("XYZ"));
+        assertInstanceOf(Failed.class, interpreter.interpret("XYZ"));
         interpreter.interpret("DECIMAL");
     }
 
     @Test
     void invalidBaseFailsOnNextNumber() {
         interpreter.interpret("1 BASE !");
-        var failed = assertInstanceOf(Interpreter.Result.Failed.class, interpreter.interpret("5"));
+        var failed = assertInstanceOf(Failed.class, interpreter.interpret("5"));
         assertTrue(failed.message().startsWith("invalid BASE"));
         machine.store(machine.baseAddress(), 10);
     }

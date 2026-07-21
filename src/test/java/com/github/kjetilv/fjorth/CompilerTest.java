@@ -1,6 +1,7 @@
 package com.github.kjetilv.fjorth;
 
 import module java.base;
+import com.github.kjetilv.fjorth.Interpreter.Result.Failed;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -43,18 +44,18 @@ class CompilerTest {
 
     @Test
     void semicolonOutsideDefinitionFails() {
-        var failed = assertInstanceOf(Interpreter.Result.Failed.class, interpreter.interpret(";"));
+        var failed = assertInstanceOf(Failed.class, interpreter.interpret(";"));
         assertTrue(failed.message().startsWith("; outside definition"));
     }
 
     @Test
     void colonInsideDefinitionFails() {
-        assertInstanceOf(Interpreter.Result.Failed.class, interpreter.interpret(": OUTER : INNER"));
+        assertInstanceOf(Failed.class, interpreter.interpret(": OUTER : INNER"));
     }
 
     @Test
     void colonWithoutNameFails() {
-        assertInstanceOf(Interpreter.Result.Failed.class, interpreter.interpret(":"));
+        assertInstanceOf(Failed.class, interpreter.interpret(":"));
     }
 
     @Test
@@ -99,10 +100,10 @@ class CompilerTest {
 
     @Test
     void errorRecoveryDiscardsOpenDefinition() {
-        assertInstanceOf(Interpreter.Result.Failed.class, interpreter.interpret(": BROKEN frobnicate"));
+        assertInstanceOf(Failed.class, interpreter.interpret(": BROKEN frobnicate"));
         interpreter.reset();
         assertArrayEquals(new long[] {3}, stackAfter("1 2 +"));
-        assertInstanceOf(Interpreter.Result.Failed.class, interpreter.interpret("BROKEN"));
+        assertInstanceOf(Failed.class, interpreter.interpret("BROKEN"));
     }
 
     private long[] stackAfter(String line) {

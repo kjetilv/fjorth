@@ -1,6 +1,7 @@
 package com.github.kjetilv.fjorth;
 
 import module java.base;
+import com.github.kjetilv.fjorth.Interpreter.Result.Failed;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -20,7 +21,7 @@ class InterpreterImplTest {
 
     @Test
     void unknownWordFails() {
-        var failed = assertInstanceOf(Interpreter.Result.Failed.class, interpreter.interpret("frobnicate"));
+        var failed = assertInstanceOf(Failed.class, interpreter.interpret("frobnicate"));
         assertTrue(failed.message().startsWith("frobnicate ?"));
     }
 
@@ -34,9 +35,9 @@ class InterpreterImplTest {
 
     @Test
     void divisionByZeroFails() {
-        assertInstanceOf(Interpreter.Result.Failed.class, interpreter.interpret("1 0 /"));
+        assertInstanceOf(Failed.class, interpreter.interpret("1 0 /"));
         machine.reset();
-        assertInstanceOf(Interpreter.Result.Failed.class, interpreter.interpret("1 0 MOD"));
+        assertInstanceOf(Failed.class, interpreter.interpret("1 0 MOD"));
     }
 
     @Test

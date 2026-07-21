@@ -2,8 +2,6 @@ package com.github.kjetilv.fjorth;
 
 import module java.base;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-
 public final class MachineImpl implements Machine {
 
     private final long[] data;
@@ -40,19 +38,9 @@ public final class MachineImpl implements Machine {
 
     @Override
     public Interpreter interpreter(Console console) {
-        var interpreter = InterpreterImpl.unsealed(
-            this,
-            Primitives.unsealedDictionary(),
-            console == null ? Console.stdout() : console
-        );
-        try (
-            var reader = new BufferedReader(new InputStreamReader(stream(), UTF_8)).lines()
-        ) {
-            reader.forEach(interpreter::interpret);
-        } catch (Exception e) {
-            throw new IllegalStateException("failed to read " + LIBRARY_RESOURCE, e);
-        }
-        return interpreter.seal();
+        return InterpreterImpl.unsealed(this, console == null ? Console.stdout() : console)
+            .loadLibrary(LIBRARY_RESOURCE)
+            .seal();
     }
 
     long[] stack() {
@@ -175,13 +163,4 @@ public final class MachineImpl implements Machine {
     private static final int DEFAULT_MEMORY_CELLS = 4096;
 
     private static final String LIBRARY_RESOURCE = "fjorth.fs";
-
-    private static InputStream stream() {
-        var classLoader = Thread.currentThread().getContextClassLoader();
-        var stream = classLoader.getResourceAsStream(LIBRARY_RESOURCE);
-        if (stream == null) {
-            throw new IllegalStateException("missing library resource: " + LIBRARY_RESOURCE);
-        }
-        return stream;
-    }
 }

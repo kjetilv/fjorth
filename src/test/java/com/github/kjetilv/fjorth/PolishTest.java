@@ -1,6 +1,7 @@
 package com.github.kjetilv.fjorth;
 
 import module java.base;
+import com.github.kjetilv.fjorth.Interpreter.Result.Failed;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -93,18 +94,18 @@ class PolishTest {
 
     @Test
     void seeUnknownWordFails() {
-        assertInstanceOf(Interpreter.Result.Failed.class, interpreter.interpret("SEE FROBNICATE"));
+        assertInstanceOf(Failed.class, interpreter.interpret("SEE FROBNICATE"));
     }
 
     @Test
     void errorsCarryInputPositionContext() {
-        var failed = assertInstanceOf(Interpreter.Result.Failed.class, interpreter.interpret("1 2 frobnicate"));
+        var failed = assertInstanceOf(Failed.class, interpreter.interpret("1 2 frobnicate"));
         assertEquals("frobnicate ?\n1 2 frobnicate\n    ^", failed.message());
     }
 
     @Test
     void errorPositionPointsAtFailingWordNotLineStart() {
-        var failed = assertInstanceOf(Interpreter.Result.Failed.class, interpreter.interpret("1 0 /"));
+        var failed = assertInstanceOf(Failed.class, interpreter.interpret("1 0 /"));
         assertEquals("division by zero\n1 0 /\n    ^", failed.message());
     }
 

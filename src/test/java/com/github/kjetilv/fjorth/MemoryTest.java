@@ -1,6 +1,7 @@
 package com.github.kjetilv.fjorth;
 
 import module java.base;
+import com.github.kjetilv.fjorth.Interpreter.Result.Failed;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -64,11 +65,11 @@ class MemoryTest {
 
     @Test
     void negativeAllotBelowZeroFails() {
-        assertInstanceOf(Interpreter.Result.Failed.class, interpreter.interpret("-10000 ALLOT"));
+        assertInstanceOf(Failed.class, interpreter.interpret("-10000 ALLOT"));
     }
 
     @Test
     void allotBeyondMemoryFails() {
-        assertInstanceOf(Interpreter.Result.Failed.class, interpreter.interpret("100000 ALLOT"));
+        assertInstanceOf(Failed.class, interpreter.interpret("100000 ALLOT"));
     }
 }

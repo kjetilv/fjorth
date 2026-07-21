@@ -1,6 +1,7 @@
 package com.github.kjetilv.fjorth;
 
 import module java.base;
+import com.github.kjetilv.fjorth.Interpreter.Result.Failed;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -169,31 +170,31 @@ class ControlFlowTest {
 
     @Test
     void loopWithoutDoFails() {
-        var failed = assertInstanceOf(Interpreter.Result.Failed.class, interpreter.interpret(": F LOOP ;"));
+        var failed = assertInstanceOf(Failed.class, interpreter.interpret(": F LOOP ;"));
         assertTrue(failed.message().startsWith("LOOP without DO"));
     }
 
     @Test
     void leaveOutsideDoFails() {
-        var failed = assertInstanceOf(Interpreter.Result.Failed.class, interpreter.interpret(": F LEAVE ;"));
+        var failed = assertInstanceOf(Failed.class, interpreter.interpret(": F LEAVE ;"));
         assertTrue(failed.message().startsWith("LEAVE outside DO"));
     }
 
     @Test
     void unterminatedDoFails() {
-        var failed = assertInstanceOf(Interpreter.Result.Failed.class, interpreter.interpret(": F 5 0 DO I ;"));
+        var failed = assertInstanceOf(Failed.class, interpreter.interpret(": F 5 0 DO I ;"));
         assertTrue(failed.message().startsWith("unterminated DO"));
     }
 
     @Test
     void ifWithoutThenFails() {
-        var failed = assertInstanceOf(Interpreter.Result.Failed.class, interpreter.interpret(": F IF 1 ;"));
+        var failed = assertInstanceOf(Failed.class, interpreter.interpret(": F IF 1 ;"));
         assertTrue(failed.message().startsWith("unresolved branch"));
     }
 
     @Test
     void controlFlowOutsideDefinitionFails() {
-        assertInstanceOf(Interpreter.Result.Failed.class, interpreter.interpret("1 IF 2 THEN"));
+        assertInstanceOf(Failed.class, interpreter.interpret("1 IF 2 THEN"));
     }
 
     private long[] stackAfter(String line) {

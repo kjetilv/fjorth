@@ -1,6 +1,7 @@
 package com.github.kjetilv.fjorth;
 
 import module java.base;
+import com.github.kjetilv.fjorth.Interpreter.Result.Failed;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -58,7 +59,7 @@ class EvaluateTest {
     @Test
     void errorIsLocatedInTheEvaluatedText() {
         var failed = assertInstanceOf(
-            Interpreter.Result.Failed.class,
+            Failed.class,
             interpreter.interpret("S\" 1 frobnicate\" EVALUATE")
         );
         assertEquals("frobnicate ?\n1 frobnicate\n  ^", failed.message());

@@ -2,10 +2,14 @@ package com.github.kjetilv.fjorth;
 
 import module java.base;
 
+import com.github.kjetilv.fjorth.Interpreter.Result.Failed;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 final class InterpreterImpl implements Interpreter {
 
-    static InterpreterImpl unsealed(MachineImpl machine, Dictionary dictionary, Console console) {
-        return new InterpreterImpl(machine, dictionary, console, false);
+    static InterpreterImpl unsealed(MachineImpl machine, Console console) {
+        return new InterpreterImpl(machine, Primitives.unsealedDictionary(), console, false);
     }
 
     private final MachineImpl machine;
@@ -44,7 +48,7 @@ final class InterpreterImpl implements Interpreter {
             return OK;
         } catch (FjorthException e) {
             try {
-                return new Result.Failed(e.getMessage());
+                return new Failed(e.getMessage());
             } finally {
                 reset();
             }
@@ -60,6 +64,26 @@ final class InterpreterImpl implements Interpreter {
     @Override
     public Console console() {
         return this.console;
+    }
+
+    InterpreterImpl loadLibrary(String libraryResource) {
+        Optional<Failed> failed;
+        try (
+            var reader = libraryReader(libraryResource)
+        ) {
+            failed = reader.lines()
+                .map(this::interpret)
+                .filter(Failed.class::isInstance)
+                .map(Failed.class::cast)
+                .findFirst();
+        } catch (Exception e) {
+            throw new IllegalStateException("failed to read " + libraryResource, e);
+        }
+        failed.map(Failed::message)
+            .ifPresent(message -> {
+                throw new IllegalStateException("Failed to execute library: " + message);
+            });
+        return this;
     }
 
     void evaluate(String text) {
@@ -257,4 +281,13 @@ final class InterpreterImpl implements Interpreter {
     }
 
     private static final Result.OK OK = new Result.OK();
+
+    private static BufferedReader libraryReader(String resource) {
+        var classLoader = Thread.currentThread().getContextClassLoader();
+        var stream = classLoader.getResourceAsStream(resource);
+        if (stream == null) {
+            throw new IllegalStateException("missing library resource: " + resource);
+        }
+        return new BufferedReader(new InputStreamReader(stream, UTF_8));
+    }
 }
