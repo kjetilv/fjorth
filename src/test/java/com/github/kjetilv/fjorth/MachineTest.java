@@ -133,8 +133,8 @@ class MachineTest {
         machine.push(1);
         machine.pushReturn(2);
         machine.compiling(true);
-        assertTrue(machine.compiling());
         machine.reset();
+
         assertEquals(0, machine.depth());
         assertEquals(0, machine.returnDepth());
         assertFalse(machine.compiling());

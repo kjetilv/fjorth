@@ -150,7 +150,8 @@ final class InterpreterImpl implements Interpreter {
                 case Word.Primitive primitive -> primitive.effect().apply(this);
                 case Word.Colon colon -> run(colon);
                 case Word.Literal(var value) -> machine.push(value);
-                case Word.Branch _, Word.ZeroBranch _ -> throw new FjorthException("branch outside definition");
+                case Word.Branch(var _), Word.ZeroBranch(var _) ->
+                    throw new FjorthException("branch outside definition");
             }
         }
     }
@@ -189,14 +190,16 @@ final class InterpreterImpl implements Interpreter {
 
     private void run(Word.Colon colon) {
         var body = colon.body();
-        var instructionPointer = 0;
-        while (instructionPointer < body.size()) {
-            instructionPointer = switch (body.get(instructionPointer)) {
-                case Word.Branch(var target) -> target;
-                case Word.ZeroBranch(var target) -> machine.pop() == 0 ? target : instructionPointer + 1;
+        var pointer = 0;
+        while (pointer < body.size()) {
+            pointer = switch (body.get(pointer)) {
+                case Word.Branch(var nextPointer) -> nextPointer;
+                case Word.ZeroBranch(var nextPointer) -> machine.pop() == 0
+                    ? nextPointer
+                    : pointer + 1;
                 case Word word -> {
                     execute(word);
-                    yield instructionPointer + 1;
+                    yield pointer + 1;
                 }
             };
         }

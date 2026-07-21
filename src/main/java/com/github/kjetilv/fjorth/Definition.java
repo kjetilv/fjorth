@@ -29,13 +29,12 @@ final class Definition {
 
     void resolve(int index, int target) {
         var active = active();
-        active.set(
-            index, switch (active.get(index)) {
-                case Word.Branch _ -> Word.branch(target);
-                case Word.ZeroBranch _ -> new Word.ZeroBranch(target);
-                case Word word -> throw new FjorthException("not a branch: " + word.name());
-            }
-        );
+        var resolved = switch (active.get(index)) {
+            case Word.Branch(var _) -> Word.branch(target);
+            case Word.ZeroBranch(var _) -> new Word.ZeroBranch(target);
+            case Word word -> throw new FjorthException("not a branch: " + word.name());
+        };
+        active.set(index, resolved);
     }
 
     void beginTail() {
