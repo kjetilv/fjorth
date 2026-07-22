@@ -1,72 +1,57 @@
 package com.github.kjetilv.fjorth;
 
 import module java.base;
-import com.github.kjetilv.fjorth.Interpreter.Result.Failed;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class EvaluateTest {
-
-    private final StringWriter output = new StringWriter();
-
-    private final MachineImpl machine = new MachineImpl();
-
-    private final Interpreter interpreter = machine.interpreter(Console.to(output));
+class EvaluateTest extends InterpreterTestCase {
 
     @Test
     void evaluatesArithmetic() {
-        assertArrayEquals(new long[] {3}, stackAfter("S\" 1 2 +\" EVALUATE"));
+        stackAfter("S\" 1 2 +\" EVALUATE", 3);
     }
 
     @Test
     void outerInputResumesAfterEvaluate() {
-        assertArrayEquals(new long[] {1, 2}, stackAfter("S\" 1\" EVALUATE 2"));
+        stackAfter("S\" 1\" EVALUATE 2", 1, 2);
     }
 
     @Test
     void evaluateInsideColonDefinition() {
-        interpreter.interpret(": RUN S\" 4 5 *\" EVALUATE ;");
-        assertArrayEquals(new long[] {20}, stackAfter("RUN"));
+        interpret(": RUN S\" 4 5 *\" EVALUATE ;");
+        stackAfter("RUN", 20);
     }
 
     @Test
     void evaluateCanDefineWords() {
-        interpreter.interpret("S\" : SQ DUP * ;\" EVALUATE");
-        assertArrayEquals(new long[] {36}, stackAfter("6 SQ"));
+        interpret("S\" : SQ DUP * ;\" EVALUATE");
+        stackAfter("6 SQ", 36);
     }
 
     @Test
     void nestedEvaluate() {
-        interpreter.interpret(": INNER S\" 2 3 +\" EVALUATE ;");
-        interpreter.interpret(": OUTER S\" INNER 10 *\" EVALUATE ;");
-        assertArrayEquals(new long[] {50}, stackAfter("OUTER"));
+        interpret(": INNER S\" 2 3 +\" EVALUATE ;");
+        interpret(": OUTER S\" INNER 10 *\" EVALUATE ;");
+        stackAfter("OUTER", 50);
     }
 
     @Test
     void compileStateStartedInsideEvaluatePersists() {
-        interpreter.interpret("S\" : ANSWER\" EVALUATE");
-        assertTrue(machine.compiling());
-        interpreter.interpret("42 ;");
-        assertArrayEquals(new long[] {42}, stackAfter("ANSWER"));
+        interpret("S\" : ANSWER\" EVALUATE");
+        assertTrue(machine().compiling());
+        interpret("42 ;");
+        stackAfter("ANSWER", 42);
     }
 
     @Test
     void emptyStringIsANoOp() {
-        assertArrayEquals(new long[] {7}, stackAfter("7 S\" \" EVALUATE"));
+        stackAfter("7 S\" \" EVALUATE", 7);
     }
 
     @Test
     void errorIsLocatedInTheEvaluatedText() {
-        var failed = assertInstanceOf(
-            Failed.class,
-            interpreter.interpret("S\" 1 frobnicate\" EVALUATE")
-        );
-        assertEquals("frobnicate ?\n1 frobnicate\n  ^", failed.message());
-    }
-
-    private long[] stackAfter(String line) {
-        interpreter.interpret(line);
-        return machine.stack();
+        var message = interpretFailed("S\" 1 frobnicate\" EVALUATE");
+        assertEquals("frobnicate ?\n1 frobnicate\n  ^", message);
     }
 }

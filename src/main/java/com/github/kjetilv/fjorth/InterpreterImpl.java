@@ -4,8 +4,6 @@ import module java.base;
 
 import com.github.kjetilv.fjorth.Interpreter.Result.Failed;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-
 final class InterpreterImpl implements Interpreter {
 
     static InterpreterImpl unsealed(MachineImpl machine, Console console) {
@@ -60,23 +58,10 @@ final class InterpreterImpl implements Interpreter {
         }
     }
 
-    InterpreterImpl loadLibrary(String libraryResource) {
-        Optional<Failed> failed;
-        try (
-            var reader = libraryReader(libraryResource)
-        ) {
-            failed = reader.lines()
-                .map(this::interpret)
-                .filter(Failed.class::isInstance)
-                .map(Failed.class::cast)
-                .findFirst();
-        } catch (Exception e) {
-            throw new IllegalStateException("failed to read " + libraryResource, e);
+    InterpreterImpl loadLibrary(String resource) {
+        if (load(resource) instanceof Result.Failed(var message)) {
+            throw new IllegalStateException("Failed to execute library: " + message);
         }
-        failed.map(Failed::message)
-            .ifPresent(message -> {
-                throw new IllegalStateException("Failed to execute library: " + message);
-            });
         return this;
     }
 
@@ -165,15 +150,13 @@ final class InterpreterImpl implements Interpreter {
         pos = input.length();
     }
 
-    void execute(Word... words) {
-        for (var word : words) {
-            switch (word) {
-                case Word.Primitive primitive -> primitive.effect().apply(this);
-                case Word.Colon colon -> run(colon);
-                case Word.Literal(var value) -> machine.push(value);
-                case Word.Branch(var _), Word.ZeroBranch(var _) ->
-                    throw new FjorthException("branch outside definition");
-            }
+    void execute(Word word) {
+        switch (word) {
+            case Word.Primitive primitive -> primitive.effect().apply(this);
+            case Word.Colon colon -> run(colon.body());
+            case Word.Literal(var value) -> machine.push(value);
+            case Word.Branch(var target) -> outsideDefinition(target);
+            case Word.ZeroBranch(var target) -> outsideDefinition(target);
         }
     }
 
@@ -196,6 +179,11 @@ final class InterpreterImpl implements Interpreter {
         return new InterpreterImpl(machine, dictionary.seal(), console, true);
     }
 
+    void reset() {
+        machine.reset();
+        definition = null;
+    }
+
     private void processTokens() {
         while (true) {
             String token = nextToken();
@@ -206,7 +194,28 @@ final class InterpreterImpl implements Interpreter {
                 handle(token);
             } catch (FjorthException e) {
                 throw e.locate(input, tokenStart);
+            } catch (Exception e) {
+                throw new IllegalStateException("Failed to process tokens", e);
             }
+        }
+    }
+
+    private Result load(String resource) {
+        var stream =
+            Thread.currentThread().getContextClassLoader().getResourceAsStream(resource);
+        if (stream == null) {
+            throw new IllegalStateException("missing library resource: " + resource);
+        }
+        try (
+            var bufferedReader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))
+        ) {
+            return bufferedReader.lines()
+                .map(this::interpret)
+                .filter(Failed.class::isInstance)
+                .findFirst()
+                .orElse(OK);
+        } catch (Exception e) {
+            throw new IllegalStateException("failed to read " + resource, e);
         }
     }
 
@@ -229,8 +238,7 @@ final class InterpreterImpl implements Interpreter {
         }
     }
 
-    private void run(Word.Colon colon) {
-        var body = colon.body();
+    private void run(List<Word> body) {
         var pointer = 0;
         while (pointer < body.size()) {
             pointer = switch (body.get(pointer)) {
@@ -244,11 +252,6 @@ final class InterpreterImpl implements Interpreter {
                 }
             };
         }
-    }
-
-    private void reset() {
-        machine.reset();
-        definition = null;
     }
 
     private String nextToken() {
@@ -279,12 +282,8 @@ final class InterpreterImpl implements Interpreter {
 
     private static final Result.OK OK = new Result.OK();
 
-    private static BufferedReader libraryReader(String resource) {
-        var classLoader = Thread.currentThread().getContextClassLoader();
-        var stream = classLoader.getResourceAsStream(resource);
-        if (stream == null) {
-            throw new IllegalStateException("missing library resource: " + resource);
-        }
-        return new BufferedReader(new InputStreamReader(stream, UTF_8));
+    private static void outsideDefinition(int target) {
+        throw new FjorthException("branch outside definition: " + target);
     }
+
 }

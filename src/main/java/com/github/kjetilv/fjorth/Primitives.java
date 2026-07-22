@@ -2,12 +2,27 @@ package com.github.kjetilv.fjorth;
 
 import module java.base;
 
-import static java.lang.Math.toIntExact;
-
 final class Primitives {
 
     @SuppressWarnings("Convert2MethodRef")
     public static final List<Word> WORDS = List.of(
+        immediate("ABORT", interpreter -> {
+            interpreter.reset();
+        }),
+        immediate("ABORT\"", interpreter -> {
+            var text = interpreter.readUntil('"');
+            var machine = interpreter.machine();
+            if (machine.compiling()) {
+                interpreter.append(Word.primitive(
+                    "(.\")",
+                    _ -> interpreter.print(text)
+                ));
+                machine.compiling(false);
+            } else {
+                interpreter.print(text);
+            }
+            interpreter.reset();
+        }),
         primitive(
             "DUP", interpreter -> {
                 var machine = interpreter.machine();
@@ -99,7 +114,7 @@ final class Primitives {
         primitive(
             ".R", interpreter -> {
                 var machine = interpreter.machine();
-                var width = toIntExact(machine.pop());
+                var width = machine.ipop();
                 var text = formatted(machine, machine.pop());
                 interpreter.print(" ".repeat(Math.max(0, width - text.length())) + text);
             }
@@ -130,7 +145,10 @@ final class Primitives {
             ".\"", interpreter -> {
                 var text = interpreter.readUntil('"');
                 if (interpreter.machine().compiling()) {
-                    interpreter.append(Word.primitive("(.\")", inner -> inner.print(text)));
+                    interpreter.append(Word.primitive(
+                        "(.\")",
+                        _ -> interpreter.print(text)
+                    ));
                 } else {
                     interpreter.print(text);
                 }
@@ -171,20 +189,22 @@ final class Primitives {
             "CONSTANT", interpreter -> {
                 var name = interpreter.word("CONSTANT");
                 var value = interpreter.machine().pop();
-                interpreter.define(Word.primitive(name, inner -> inner.machine().push(value)));
+                interpreter.define(Word.primitive(name, _ -> interpreter.machine().push(value)));
             }
         ),
         primitive(
             "VARIABLE", interpreter -> {
                 var name = interpreter.word("VARIABLE");
                 long address = interpreter.machine().allot(1);
-                interpreter.define(Word.primitive(name, inner -> inner.machine().push(address)));
+                interpreter.define(Word.primitive(name, _ -> interpreter.machine().push(address)));
             }
         ),
         primitive(
             "@", interpreter -> {
                 var machine = interpreter.machine();
-                machine.push(machine.fetch(machine.pop()));
+                var address = machine.pop();
+                var value = machine.fetch(address);
+                machine.push(value);
             }
         ),
         primitive(
@@ -203,10 +223,11 @@ final class Primitives {
         primitive(
             "ALLOT", interpreter -> {
                 var machine = interpreter.machine();
-                machine.allot(toIntExact(machine.pop()));
+                machine.allot(machine.ipop());
             }
         ),
         unary("CELLS", cells -> cells),
+        noop("CELLS+"),
         primitive(
             "+!", interpreter -> {
                 var machine = interpreter.machine();
@@ -224,7 +245,12 @@ final class Primitives {
             "CREATE", interpreter -> {
                 var name = interpreter.word("CREATE");
                 long address = interpreter.machine().here();
-                interpreter.define(Word.primitive(name, false, inner -> inner.machine().push(address)));
+                interpreter.define(Word.primitive(
+                    name,
+                    false,
+                    _ ->
+                        interpreter.machine().push(address)
+                ));
             }
         ),
         immediate(
@@ -237,7 +263,7 @@ final class Primitives {
         immediate(
             "ELSE", interpreter -> {
                 var machine = interpreter.machine();
-                var ifAt = toIntExact(machine.pop());
+                var ifAt = machine.ipop();
                 var elseAt = interpreter.open().size();
                 interpreter.append(Word.branch(-1));
                 interpreter.open().resolve(ifAt, interpreter.open().size());
@@ -246,7 +272,7 @@ final class Primitives {
         ),
         immediate(
             "THEN", interpreter -> {
-                var at = toIntExact(interpreter.machine().pop());
+                var at = interpreter.machine().ipop();
                 interpreter.open().resolve(at, interpreter.open().size());
             }
         ),
@@ -256,7 +282,7 @@ final class Primitives {
         ),
         immediate(
             "UNTIL", interpreter ->
-                interpreter.append(Word.zeroBranch(toIntExact(interpreter.machine().pop())))
+                interpreter.append(Word.zeroBranch(interpreter.machine().ipop()))
         ),
         immediate(
             "WHILE", interpreter -> {
@@ -268,8 +294,8 @@ final class Primitives {
         immediate(
             "REPEAT", interpreter -> {
                 var machine = interpreter.machine();
-                var whileAt = toIntExact(machine.pop());
-                var dest = toIntExact(machine.pop());
+                var whileAt = machine.ipop();
+                var dest = machine.ipop();
                 interpreter.append(Word.branch(dest));
                 interpreter.open().resolve(whileAt, interpreter.open().size());
             }
@@ -384,10 +410,52 @@ final class Primitives {
                     .orElseThrow(() -> new FjorthException(name + " ?"));
                 interpreter.print(render(word));
             }
-        )
+        ),
+        primitive(
+            "FILL", interpreter -> {
+                var machine = interpreter.machine();
+                var c = machine.pop();
+                var count = machine.pop();
+                var address = machine.pop();
+                machine.store(address, count, c);
+            }
+        ),
+        primitive(
+            "ERASE", interpreter -> {
+                var machine = interpreter.machine();
+                var count = machine.pop();
+                var address = machine.pop();
+                machine.store(address, count, (char) 0);
+            }
+        ),
+        primitive(
+            "C@", interpreter -> {
+                var machine = interpreter.machine();
+                var address = machine.pop();
+                var value = machine.fetch(address);
+                machine.push(value);
+            }
+        ),
+        primitive(
+            "C!", interpreter -> {
+                var machine = interpreter.machine();
+                var address = machine.pop();
+                var value = machine.pop();
+                machine.store(address, 1, value);
+            }
+        ),
+        noop("ALIGN"),
+        unary("ALIGNED", cells -> cells)
     );
 
     private Primitives() {
+    }
+
+    private static Word noop(String name) {
+        return primitive(
+            name, _ -> {
+            }
+        );
     }
 
     private static String render(Word word) {
@@ -457,7 +525,7 @@ final class Primitives {
         var machine = interpreter.machine();
         var open = interpreter.open();
         var leaves = open.endLoop();
-        var dest = toIntExact(machine.pop());
+        var dest = machine.ipop();
         interpreter.append(runtime);
         interpreter.append(Word.zeroBranch(dest));
         var after = open.size();

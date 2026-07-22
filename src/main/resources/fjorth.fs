@@ -22,3 +22,7 @@
 : OCTAL ( -- 8) 8 BASE ! ;
 : SPACE ( -- ) 32 EMIT ;
 : SPACES ( n -- ) BEGIN DUP 0 > WHILE SPACE 1- REPEAT DROP ;
+: 2@ DUP CELL+ @ SWAP @ ;
+: 2R@ R> R> 2DUP >R >R SWAP ;
+: 2R> R> R> SWAP ;
+: 2>R SWAP >R >R ;

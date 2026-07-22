@@ -1,112 +1,97 @@
 package com.github.kjetilv.fjorth;
 
 import module java.base;
-import com.github.kjetilv.fjorth.Interpreter.Result.Failed;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class CompilerTest {
-
-    private final StringWriter output = new StringWriter();
-
-    private final MachineImpl machine = new MachineImpl();
-
-    private final Interpreter interpreter = machine.interpreter(Console.to(output));
+class CompilerTest extends InterpreterTestCase {
 
     @Test
     void defineAndCall() {
-        assertArrayEquals(new long[] {25}, stackAfter(": SQUARE DUP * ; 5 SQUARE"));
+        stackAfter(": SQUARE DUP * ; 5 SQUARE", 25);
     }
 
     @Test
     void literalsCompile() {
-        assertArrayEquals(new long[] {20}, stackAfter(": TEN 10 ; TEN TEN +"));
+        stackAfter(": TEN 10 ; TEN TEN +", 20);
     }
 
     @Test
     void nestedCalls() {
-        assertArrayEquals(new long[] {16}, stackAfter(": SQ DUP * ; : QUAD SQ SQ ; 2 QUAD"));
+        stackAfter(": SQ DUP * ; : QUAD SQ SQ ; 2 QUAD", 16);
     }
 
     @Test
     void definitionMaySpanLines() {
-        interpreter.interpret(": SQUARE");
-        interpreter.interpret("DUP *");
-        interpreter.interpret("; 6 SQUARE");
-        assertArrayEquals(new long[] {36}, machine.stack());
+        interpret(": SQUARE");
+        interpret("DUP *");
+        stackAfter("; 6 SQUARE", 36);
     }
 
     @Test
     void redefinitionShadowsButOldCallersKeepOldWord() {
-        assertArrayEquals(new long[] {2, 1}, stackAfter(": X 1 ; : Y X ; : X 2 ; X Y"));
+        stackAfter(": X 1 ; : Y X ; : X 2 ; X Y", 2, 1);
     }
 
     @Test
     void semicolonOutsideDefinitionFails() {
-        var failed = assertInstanceOf(Failed.class, interpreter.interpret(";"));
-        assertTrue(failed.message().startsWith("; outside definition"));
+        var message = interpretFailed(";");
+        assertTrue(message.startsWith("; outside definition"));
     }
 
     @Test
     void colonInsideDefinitionFails() {
-        assertInstanceOf(Failed.class, interpreter.interpret(": OUTER : INNER"));
+        interpretFailed(": OUTER : INNER");
     }
 
     @Test
     void colonWithoutNameFails() {
-        assertInstanceOf(Failed.class, interpreter.interpret(":"));
+        interpretFailed(":");
     }
 
     @Test
     void constantPushesItsValue() {
-        assertArrayEquals(new long[] {84}, stackAfter("42 CONSTANT ANSWER ANSWER ANSWER +"));
+        stackAfter("42 CONSTANT ANSWER ANSWER ANSWER +", 84);
     }
 
     @Test
     void constantCompilesIntoDefinitions() {
-        assertArrayEquals(new long[] {43}, stackAfter("42 CONSTANT ANSWER : NEXT ANSWER 1 + ; NEXT"));
+        stackAfter("42 CONSTANT ANSWER : NEXT ANSWER 1 + ; NEXT", 43);
     }
 
     @Test
     void variableStoresAndFetches() {
-        assertArrayEquals(new long[] {7}, stackAfter("VARIABLE V 7 V ! V @"));
+        stackAfter("VARIABLE V 7 V ! V @", 7);
     }
 
     @Test
     void variablesAreDistinct() {
-        assertArrayEquals(new long[] {1, 2}, stackAfter("VARIABLE A VARIABLE B 1 A ! 2 B ! A @ B @"));
+        stackAfter("VARIABLE A VARIABLE B 1 A ! 2 B ! A @ B @", 1, 2);
     }
 
     @Test
     void immediateWordExecutesDuringCompilation() {
-        interpreter.interpret(": FIVE 5 ; IMMEDIATE");
-        interpreter.interpret(": EMPTY FIVE ;");
-        assertArrayEquals(new long[] {5}, machine.stack());
-        interpreter.interpret("EMPTY");
-        assertArrayEquals(new long[] {5}, machine.stack());
+        interpret(": FIVE 5 ; IMMEDIATE");
+        stackAfter(": EMPTY FIVE ;", 5);
+        stackAfter("EMPTY", 5);
     }
 
     @Test
     void dotQuoteCompilesIntoDefinitions() {
-        interpreter.interpret(": GREET .\" hello\" ; GREET GREET");
-        assertEquals("hellohello", output.toString());
+        interpret(": GREET .\" hello\" ; GREET GREET");
+        assertEquals("hellohello", output());
     }
 
     @Test
     void commentsInsideDefinitionsAreSkipped() {
-        assertArrayEquals(new long[] {1, 2}, stackAfter(": F 1 ( one ) 2 ; F \\ trailing comment"));
+        stackAfter(": F 1 ( one ) 2 ; F \\ trailing comment", 1, 2);
     }
 
     @Test
     void errorRecoveryDiscardsOpenDefinition() {
-        assertInstanceOf(Failed.class, interpreter.interpret(": BROKEN frobnicate"));
-        assertArrayEquals(new long[] {3}, stackAfter("1 2 +"));
-        assertInstanceOf(Failed.class, interpreter.interpret("BROKEN"));
-    }
-
-    private long[] stackAfter(String line) {
-        interpreter.interpret(line);
-        return machine.stack();
+        interpretFailed(": BROKEN frobnicate");
+        stackAfter("1 2 +", 3);
+        interpretFailed("BROKEN");
     }
 }

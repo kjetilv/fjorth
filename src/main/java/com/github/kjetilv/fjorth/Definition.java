@@ -108,8 +108,10 @@ final class Definition {
                 var latest = interpreter.dictionary().latest()
                     .orElseThrow(() -> new FjorthException("DOES>: empty dictionary"));
                 interpreter.define(Word.primitive(
-                    latest.name(), inner ->
-                        inner.execute(latest, tailColon)
+                    latest.name(), _ -> {
+                        interpreter.execute(latest);
+                        interpreter.execute(tailColon);
+                    }
                 ));
             }
         );

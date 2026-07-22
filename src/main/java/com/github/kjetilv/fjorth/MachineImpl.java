@@ -2,9 +2,10 @@ package com.github.kjetilv.fjorth;
 
 import module java.base;
 
-import static java.lang.Math.toIntExact;
-
+@SuppressWarnings("UnusedReturnValue")
 public final class MachineImpl implements Machine {
+
+    public static final int CHAR_MASK = 0xFFFF;
 
     private final long[] data;
 
@@ -40,12 +41,18 @@ public final class MachineImpl implements Machine {
 
     @Override
     public Interpreter interpreter(Console console) {
-        return InterpreterImpl.unsealed(
-                this,
-                console == null ? Console.stdout() : console
-            )
+        return InterpreterImpl
+            .unsealed(this, console == null ? Console.stdout() : console)
             .loadLibrary(LIBRARY_RESOURCE)
             .seal();
+    }
+
+    public char charAt(long address) {
+        return asChar(memory[checkAddress(address)]);
+    }
+
+    public char cpop() {
+        return asChar(pop());
     }
 
     long[] stack() {
@@ -58,33 +65,42 @@ public final class MachineImpl implements Machine {
 
     int base() {
         var base = fetch(baseAddress);
-        if (2 <= base && base <= 36) {
-            return toIntExact(base);
-        }
-        throw new FjorthException("invalid BASE: " + base);
+        return 2 <= base && base <= 36
+            ? (int) base
+            : fail("invalid BASE: " + base);
     }
 
     void push(long value) {
-        if (dataTop == data.length) {
-            throw new FjorthException("stack overflow");
-        }
+        checkOverflow();
         data[dataTop] = value;
         dataTop++;
     }
 
-    long pop() {
-        if (dataTop == 0) {
-            throw new FjorthException("stack underflow");
+    int ipop() {
+        var pop = pop();
+        try {
+            return Math.toIntExact(pop);
+        } catch (Exception e) {
+            throw new IllegalStateException("Expected int-sized value on stack: " + pop);
         }
+    }
+
+    long pop() {
+        checkUnderflow();
         dataTop--;
         return data[dataTop];
     }
 
     long peek() {
-        if (dataTop == 0) {
-            throw new FjorthException("stack underflow");
-        }
-        return data[dataTop - 1];
+        return dataTop == 0
+            ? fail("stack underflow")
+            : data[dataTop - 1];
+    }
+
+    long peek(int offset) {
+        return dataTop > offset
+            ? data[dataTop - 1 - offset]
+            : fail("stack underflow");
     }
 
     int depth() {
@@ -92,26 +108,27 @@ public final class MachineImpl implements Machine {
     }
 
     void pushReturn(long value) {
-        if (returnsTop == returns.length) {
-            throw new FjorthException("return stack overflow");
-        }
+        checkReturnOverflow();
         returns[returnsTop] = value;
         returnsTop++;
     }
 
     long popReturn() {
-        if (returnsTop == 0) {
-            throw new FjorthException("return stack underflow");
-        }
+        checkReturnUnderflow();
         returnsTop--;
         return returns[returnsTop];
     }
 
+    long peekReturn() {
+        return returnsTop == 0
+            ? fail("return stack underflow")
+            : returns[returnsTop - 1];
+    }
+
     long peekReturn(int offset) {
-        if (returnsTop > offset) {
-            return returns[returnsTop - 1 - offset];
-        }
-        throw new FjorthException("return stack underflow");
+        return returnsTop > offset
+            ? returns[returnsTop - 1 - offset]
+            : fail("return stack underflow");
     }
 
     int returnDepth() {
@@ -120,10 +137,10 @@ public final class MachineImpl implements Machine {
 
     int allot(int cells) {
         if (here + cells > memory.length) {
-            throw new FjorthException("memory exhausted");
+            return fail("memory exhausted");
         }
         if (here + cells < 0) {
-            throw new FjorthException("negative ALLOT below memory start");
+            return fail("negative ALLOT below memory start");
         }
         var address = here;
         here += cells;
@@ -142,6 +159,16 @@ public final class MachineImpl implements Machine {
         memory[checkAddress(address)] = value;
     }
 
+    void store(long address, long count, long value) {
+        if (count > 0) {
+            var addr = checkAddress(address);
+            var toAddr = checkAddress(address + count);
+            for (int position = addr; position < toAddr; position++) {
+                memory[position] = value;
+            }
+        }
+    }
+
     boolean compiling() {
         return compiling;
     }
@@ -156,16 +183,47 @@ public final class MachineImpl implements Machine {
         compiling = false;
     }
 
-    private int checkAddress(long address) {
-        if (address >= 0 && address < memory.length) {
-            return toIntExact(address);
+    private void checkOverflow() {
+        if (dataTop == data.length) {
+            fail("stack overflow");
         }
-        throw new FjorthException("invalid address: " + address);
     }
 
-    private static final int DEFAULT_STACK_SIZE = 256;
+    private void checkUnderflow() {
+        if (dataTop == 0) {
+            fail("stack underflow");
+        }
+    }
 
-    private static final int DEFAULT_MEMORY_CELLS = 4096;
+    private void checkReturnOverflow() {
+        if (returnsTop == returns.length) {
+            throw new FjorthException("return stack overflow");
+        }
+    }
+
+    private void checkReturnUnderflow() {
+        if (returnsTop == 0) {
+            fail("return stack underflow");
+        }
+    }
+
+    private int checkAddress(long address) {
+        return address >= 0 && address < memory.length
+            ? (int) address
+            : fail("invalid address: " + address);
+    }
+
+    private static final int DEFAULT_STACK_SIZE = 1024;
+
+    private static final int DEFAULT_MEMORY_CELLS = 65536;
 
     private static final String LIBRARY_RESOURCE = "fjorth.fs";
+
+    private static char asChar(long pop) {
+        return (char) (pop & CHAR_MASK);
+    }
+
+    private static <T> T fail(String msg) {
+        throw new FjorthException(msg);
+    }
 }
