@@ -2,21 +2,23 @@ package com.github.kjetilv.fjorth;
 
 import module java.base;
 
+import static java.lang.Math.toIntExact;
+
 public final class MachineImpl implements Machine {
 
     private final long[] data;
 
-    private int dataTop;
-
     private final long[] returns;
-
-    private int returnsTop;
 
     private final long[] memory;
 
-    private int here;
-
     private final int baseAddress;
+
+    private int dataTop;
+
+    private int returnsTop;
+
+    private int here;
 
     private boolean compiling;
 
@@ -38,7 +40,10 @@ public final class MachineImpl implements Machine {
 
     @Override
     public Interpreter interpreter(Console console) {
-        return InterpreterImpl.unsealed(this, console == null ? Console.stdout() : console)
+        return InterpreterImpl.unsealed(
+                this,
+                console == null ? Console.stdout() : console
+            )
             .loadLibrary(LIBRARY_RESOURCE)
             .seal();
     }
@@ -53,24 +58,26 @@ public final class MachineImpl implements Machine {
 
     int base() {
         var base = fetch(baseAddress);
-        if (base < 2 || base > 36) {
-            throw new FjorthException("invalid BASE: " + base);
+        if (2 <= base && base <= 36) {
+            return toIntExact(base);
         }
-        return (int) base;
+        throw new FjorthException("invalid BASE: " + base);
     }
 
     void push(long value) {
         if (dataTop == data.length) {
             throw new FjorthException("stack overflow");
         }
-        data[dataTop++] = value;
+        data[dataTop] = value;
+        dataTop++;
     }
 
     long pop() {
         if (dataTop == 0) {
             throw new FjorthException("stack underflow");
         }
-        return data[--dataTop];
+        dataTop--;
+        return data[dataTop];
     }
 
     long peek() {
@@ -88,25 +95,23 @@ public final class MachineImpl implements Machine {
         if (returnsTop == returns.length) {
             throw new FjorthException("return stack overflow");
         }
-        returns[returnsTop++] = value;
+        returns[returnsTop] = value;
+        returnsTop++;
     }
 
     long popReturn() {
         if (returnsTop == 0) {
             throw new FjorthException("return stack underflow");
         }
-        return returns[--returnsTop];
-    }
-
-    long peekReturn() {
-        return peekReturn(0);
+        returnsTop--;
+        return returns[returnsTop];
     }
 
     long peekReturn(int offset) {
-        if (returnsTop <= offset) {
-            throw new FjorthException("return stack underflow");
+        if (returnsTop > offset) {
+            return returns[returnsTop - 1 - offset];
         }
-        return returns[returnsTop - 1 - offset];
+        throw new FjorthException("return stack underflow");
     }
 
     int returnDepth() {
@@ -152,10 +157,10 @@ public final class MachineImpl implements Machine {
     }
 
     private int checkAddress(long address) {
-        if (address < 0 || address >= memory.length) {
-            throw new FjorthException("invalid address: " + address);
+        if (address >= 0 && address < memory.length) {
+            return toIntExact(address);
         }
-        return (int) address;
+        throw new FjorthException("invalid address: " + address);
     }
 
     private static final int DEFAULT_STACK_SIZE = 256;

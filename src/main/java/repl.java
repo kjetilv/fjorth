@@ -13,7 +13,7 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-///  Sally Fjorð!
+///  Salty Fjorð!
 void main(String[] args) {
     Arrays.stream(args)
         .peek(arg -> CONSOLE.println("*** evaluating file " + arg))
@@ -76,11 +76,9 @@ private boolean evaluate(String line) {
     };
 }
 
-private static final Machine machine = Machine.create();
+private static final Console CONSOLE = Console.stdout();
 
-private static final Interpreter INTERPRETER = machine.interpreter();
-
-private static final Console CONSOLE = INTERPRETER.console();
+private static final Interpreter INTERPRETER = Machine.create().interpreter(CONSOLE);
 
 private static BufferedReader stdin() {
     return new BufferedReader(new InputStreamReader(System.in));

@@ -4,10 +4,6 @@ public interface Interpreter {
 
     Result interpret(String line);
 
-    void reset();
-
-    Console console();
-
     sealed interface Result {
 
         record OK() implements Result {

@@ -2,394 +2,392 @@ package com.github.kjetilv.fjorth;
 
 import module java.base;
 
+import static java.lang.Math.toIntExact;
+
 final class Primitives {
 
-    static Dictionary unsealedDictionary() {
-        return Dictionary.of(words());
-    }
+    @SuppressWarnings("Convert2MethodRef")
+    public static final List<Word> WORDS = List.of(
+        primitive(
+            "DUP", interpreter -> {
+                var machine = interpreter.machine();
+                machine.push(machine.peek());
+            }
+        ),
+        primitive("DROP", interpreter -> interpreter.machine().pop()),
+        primitive(
+            "SWAP", interpreter -> {
+                var machine = interpreter.machine();
+                var b = machine.pop();
+                var a = machine.pop();
+                machine.push(b);
+                machine.push(a);
+            }
+        ),
+        primitive(
+            "OVER", interpreter -> {
+                var machine = interpreter.machine();
+                var b = machine.pop();
+                var a = machine.pop();
+                machine.push(a);
+                machine.push(b);
+                machine.push(a);
+            }
+        ),
+        primitive(
+            "ROT", interpreter -> {
+                var machine = interpreter.machine();
+                var c = machine.pop();
+                var b = machine.pop();
+                var a = machine.pop();
+                machine.push(b);
+                machine.push(c);
+                machine.push(a);
+            }
+        ),
+        binary("+", (a, b) -> a + b),
+        binary("-", (a, b) -> a - b),
+        binary("*", (a, b) -> a * b),
+        binary(
+            "/", (a, b) -> {
+                if (b == 0) {
+                    throw new FjorthException("division by zero");
+                }
+                return a / b;
+            }
+        ),
+        binary(
+            "MOD", (a, b) -> {
+                if (b == 0) {
+                    throw new FjorthException("division by zero");
+                }
+                return a % b;
+            }
+        ),
+        binary("=", (a, b) -> flag(a == b)),
+        binary("<", (a, b) -> flag(a < b)),
+        binary(">", (a, b) -> flag(a > b)),
+        unary("0=", a -> flag(a == 0)),
+        binary("AND", (a, b) -> a & b),
+        binary("OR", (a, b) -> a | b),
+        binary("XOR", (a, b) -> a ^ b),
+        unary("INVERT", a -> ~a),
+        primitive(
+            ">R", interpreter -> {
+                var machine = interpreter.machine();
+                machine.pushReturn(machine.pop());
+            }
+        ),
+        primitive(
+            "R>", interpreter -> {
+                var machine = interpreter.machine();
+                machine.push(machine.popReturn());
+            }
+        ),
+        primitive(
+            "R@", interpreter -> {
+                var machine = interpreter.machine();
+                machine.push(machine.peekReturn(0));
+            }
+        ),
+        primitive(
+            ".", interpreter -> {
+                var machine = interpreter.machine();
+                interpreter.print(formatted(machine, machine.pop()) + " ");
+            }
+        ),
+        primitive(
+            ".R", interpreter -> {
+                var machine = interpreter.machine();
+                var width = toIntExact(machine.pop());
+                var text = formatted(machine, machine.pop());
+                interpreter.print(" ".repeat(Math.max(0, width - text.length())) + text);
+            }
+        ),
+        primitive(
+            ".S", interpreter -> {
+                var machine = interpreter.machine();
+                var stack = machine.stack();
+                var text = new StringBuilder("<").append(stack.length).append("> ");
+                for (var value : stack) {
+                    text.append(formatted(machine, value)).append(' ');
+                }
+                interpreter.print(text.toString());
+            }
+        ),
+        primitive(
+            "BASE", interpreter -> {
+                var machine = interpreter.machine();
+                machine.push(machine.baseAddress());
+            }
+        ),
+        primitive(
+            "EMIT", interpreter ->
+                interpreter.print((char) interpreter.machine().pop())
+        ),
+        primitive("CR", interpreter -> interpreter.print('\n')),
+        immediate(
+            ".\"", interpreter -> {
+                var text = interpreter.readUntil('"');
+                if (interpreter.machine().compiling()) {
+                    interpreter.append(Word.primitive("(.\")", inner -> inner.print(text)));
+                } else {
+                    interpreter.print(text);
+                }
+            }
+        ),
+        immediate(
+            "S\"", interpreter -> {
+                var text = interpreter.readUntil('"');
+                var machine = interpreter.machine();
+                var address = machine.allot(text.length());
+                for (var i = 0; i < text.length(); i++) {
+                    machine.store(address + i, text.charAt(i));
+                }
+                if (machine.compiling()) {
+                    interpreter.append(Word.literal(address));
+                    interpreter.append(Word.literal(text.length()));
+                } else {
+                    machine.push(address);
+                    machine.push(text.length());
+                }
+            }
+        ),
+        primitive(
+            "TYPE", interpreter ->
+                interpreter.print(poppedString(interpreter.machine()))
+        ),
+        primitive(
+            "EVALUATE", interpreter ->
+                interpreter.evaluate(poppedString(interpreter.machine()))
+        ),
+        immediate("(", interpreter -> interpreter.readUntil(')')),
+        immediate("\\", InterpreterImpl::readRestOfLine),
+        primitive(":", interpreter -> interpreter.beginDefinition(interpreter.word(":"))),
+        immediate(";", InterpreterImpl::endDefinition),
+        primitive("IMMEDIATE", InterpreterImpl::makeLatestImmediate),
+        immediate("DOES>", interpreter -> interpreter.open().beginTail()),
+        primitive(
+            "CONSTANT", interpreter -> {
+                var name = interpreter.word("CONSTANT");
+                var value = interpreter.machine().pop();
+                interpreter.define(Word.primitive(name, inner -> inner.machine().push(value)));
+            }
+        ),
+        primitive(
+            "VARIABLE", interpreter -> {
+                var name = interpreter.word("VARIABLE");
+                long address = interpreter.machine().allot(1);
+                interpreter.define(Word.primitive(name, inner -> inner.machine().push(address)));
+            }
+        ),
+        primitive(
+            "@", interpreter -> {
+                var machine = interpreter.machine();
+                machine.push(machine.fetch(machine.pop()));
+            }
+        ),
+        primitive(
+            "!", interpreter -> {
+                var machine = interpreter.machine();
+                var address = machine.pop();
+                machine.store(address, machine.pop());
+            }
+        ),
+        primitive(
+            "HERE", interpreter -> {
+                var machine = interpreter.machine();
+                machine.push(machine.here());
+            }
+        ),
+        primitive(
+            "ALLOT", interpreter -> {
+                var machine = interpreter.machine();
+                machine.allot(toIntExact(machine.pop()));
+            }
+        ),
+        unary("CELLS", cells -> cells),
+        primitive(
+            "+!", interpreter -> {
+                var machine = interpreter.machine();
+                var address = machine.pop();
+                machine.store(address, machine.fetch(address) + machine.pop());
+            }
+        ),
+        primitive(
+            ",", interpreter -> {
+                var machine = interpreter.machine();
+                machine.store(machine.allot(1), machine.pop());
+            }
+        ),
+        primitive(
+            "CREATE", interpreter -> {
+                var name = interpreter.word("CREATE");
+                long address = interpreter.machine().here();
+                interpreter.define(Word.primitive(name, false, inner -> inner.machine().push(address)));
+            }
+        ),
+        immediate(
+            "IF", interpreter -> {
+                var at = interpreter.open().size();
+                interpreter.append(Word.zeroBranch(-1));
+                interpreter.machine().push(at);
+            }
+        ),
+        immediate(
+            "ELSE", interpreter -> {
+                var machine = interpreter.machine();
+                var ifAt = toIntExact(machine.pop());
+                var elseAt = interpreter.open().size();
+                interpreter.append(Word.branch(-1));
+                interpreter.open().resolve(ifAt, interpreter.open().size());
+                machine.push(elseAt);
+            }
+        ),
+        immediate(
+            "THEN", interpreter -> {
+                var at = toIntExact(interpreter.machine().pop());
+                interpreter.open().resolve(at, interpreter.open().size());
+            }
+        ),
+        immediate(
+            "BEGIN", interpreter ->
+                interpreter.machine().push(interpreter.open().size())
+        ),
+        immediate(
+            "UNTIL", interpreter ->
+                interpreter.append(Word.zeroBranch(toIntExact(interpreter.machine().pop())))
+        ),
+        immediate(
+            "WHILE", interpreter -> {
+                var at = interpreter.open().size();
+                interpreter.append(Word.zeroBranch(-1));
+                interpreter.machine().push(at);
+            }
+        ),
+        immediate(
+            "REPEAT", interpreter -> {
+                var machine = interpreter.machine();
+                var whileAt = toIntExact(machine.pop());
+                var dest = toIntExact(machine.pop());
+                interpreter.append(Word.branch(dest));
+                interpreter.open().resolve(whileAt, interpreter.open().size());
+            }
+        ),
+        immediate(
+            "DO", interpreter -> {
+                var machine = interpreter.machine();
+                interpreter.append(primitive(
+                    "(do)", _ -> {
+                        var index = machine.pop();
+                        var limit = machine.pop();
+                        machine.pushReturn(limit);
+                        machine.pushReturn(slot(index, limit));
+                    }
+                ));
+                interpreter.open().beginLoop();
+                interpreter.machine().push(interpreter.open().size());
+            }
+        ),
+        immediate(
+            "?DO", interpreter -> {
+                var machine = interpreter.machine();
+                interpreter.append(primitive(
+                    "(?do)", _ -> {
+                        var index = machine.pop();
+                        var limit = machine.pop();
+                        if (limit == index) {
+                            machine.push(0);
+                        } else {
+                            machine.pushReturn(limit);
+                            machine.pushReturn(slot(index, limit));
+                            machine.push(-1);
+                        }
+                    }
+                ));
+                var open = interpreter.open();
+                open.beginLoop();
+                var skip = open.size();
+                interpreter.append(Word.zeroBranch(-1));
+                open.addLeave(skip);
+                interpreter.machine().push(open.size());
+            }
+        ),
+        immediate(
+            "LOOP",
+            interpreter -> closeLoop(
+                interpreter,
+                primitive(
+                    "(loop)", _ ->
+                        loopStep(interpreter.machine(), 1)
+                )
+            )
+        ),
+        immediate(
+            "+LOOP", interpreter -> closeLoop(
+                interpreter,
+                primitive(
+                    "(+loop)", _ -> {
+                        var machine1 = interpreter.machine();
+                        loopStep(machine1, machine1.pop());
+                    }
+                )
+            )
+        ),
+        immediate(
+            "LEAVE", interpreter -> {
+                var machine = interpreter.machine();
+                interpreter.append(primitive(
+                    "(unloop)", _ -> {
+                        machine.popReturn();
+                        machine.popReturn();
+                    }
+                ));
+                var at = interpreter.open().size();
+                interpreter.append(Word.branch(-1));
+                interpreter.open().addLeave(at);
+            }
+        ),
+        immediate(
+            "EXIT", interpreter ->
+                interpreter.append(Word.branch(Integer.MAX_VALUE))
+        ),
+        immediate(
+            "RECURSE", interpreter ->
+                interpreter.append(interpreter.open().recurse())
+        ),
+        primitive(
+            "I", interpreter -> {
+                var machine = interpreter.machine();
+                machine.push(index(machine.peekReturn(0), machine.peekReturn(1)));
+            }
+        ),
+        primitive(
+            "J", interpreter -> {
+                var machine = interpreter.machine();
+                machine.push(index(machine.peekReturn(2), machine.peekReturn(3)));
+            }
+        ),
+        primitive(
+            "WORDS", interpreter -> {
+                interpreter.print(interpreter.dictionary().words()
+                    .map(Word::name)
+                    .distinct()
+                    .collect(Collectors.joining(" ")));
+                interpreter.print('\n');
+            }
+        ),
+        primitive(
+            "SEE", interpreter -> {
+                var name = interpreter.word("SEE");
+                var word = interpreter.dictionary().lookup(name)
+                    .orElseThrow(() -> new FjorthException(name + " ?"));
+                interpreter.print(render(word));
+            }
+        )
+    );
 
     private Primitives() {
-    }
-
-    private static final Word DO_RUNTIME = primitive(
-        "(do)", interpreter -> {
-            var machine = interpreter.machine();
-            var index = machine.pop();
-            var limit = machine.pop();
-            machine.pushReturn(limit);
-            machine.pushReturn(slot(index, limit));
-        }
-    );
-
-    private static final Word LOOP_RUNTIME = primitive(
-        "(loop)", interpreter -> loopStep(interpreter.machine(), 1)
-    );
-
-    private static final Word PLUS_LOOP_RUNTIME = primitive(
-        "(+loop)", interpreter -> {
-            var machine = interpreter.machine();
-            loopStep(machine, machine.pop());
-        }
-    );
-
-    private static final Word QDO_RUNTIME = primitive(
-        "(?do)", interpreter -> {
-            var machine = interpreter.machine();
-            var index = machine.pop();
-            var limit = machine.pop();
-            if (limit == index) {
-                machine.push(0);
-            } else {
-                machine.pushReturn(limit);
-                machine.pushReturn(slot(index, limit));
-                machine.push(-1);
-            }
-        }
-    );
-
-    private static final Word UNLOOP_RUNTIME = primitive(
-        "(unloop)", interpreter -> {
-            var machine = interpreter.machine();
-            machine.popReturn();
-            machine.popReturn();
-        }
-    );
-
-    private static List<Word> words() {
-        //noinspection Convert2MethodRef
-        return List.of(
-            primitive(
-                "DUP", interpreter -> {
-                    var machine = interpreter.machine();
-                    machine.push(machine.peek());
-                }
-            ),
-            primitive("DROP", interpreter -> interpreter.machine().pop()),
-            primitive(
-                "SWAP", interpreter -> {
-                    var machine = interpreter.machine();
-                    var b = machine.pop();
-                    var a = machine.pop();
-                    machine.push(b);
-                    machine.push(a);
-                }
-            ),
-            primitive(
-                "OVER", interpreter -> {
-                    var machine = interpreter.machine();
-                    var b = machine.pop();
-                    var a = machine.pop();
-                    machine.push(a);
-                    machine.push(b);
-                    machine.push(a);
-                }
-            ),
-            primitive(
-                "ROT", interpreter -> {
-                    var machine = interpreter.machine();
-                    var c = machine.pop();
-                    var b = machine.pop();
-                    var a = machine.pop();
-                    machine.push(b);
-                    machine.push(c);
-                    machine.push(a);
-                }
-            ),
-            binary("+", (a, b) -> a + b),
-            binary("-", (a, b) -> a - b),
-            binary("*", (a, b) -> a * b),
-            binary(
-                "/", (a, b) -> {
-                    if (b == 0) {
-                        throw new FjorthException("division by zero");
-                    }
-                    return a / b;
-                }
-            ),
-            binary(
-                "MOD", (a, b) -> {
-                    if (b == 0) {
-                        throw new FjorthException("division by zero");
-                    }
-                    return a % b;
-                }
-            ),
-            binary("=", (a, b) -> flag(a == b)),
-            binary("<", (a, b) -> flag(a < b)),
-            binary(">", (a, b) -> flag(a > b)),
-            unary("0=", a -> flag(a == 0)),
-            binary("AND", (a, b) -> a & b),
-            binary("OR", (a, b) -> a | b),
-            binary("XOR", (a, b) -> a ^ b),
-            unary("INVERT", a -> ~a),
-            primitive(
-                ">R", interpreter -> {
-                    var machine = interpreter.machine();
-                    machine.pushReturn(machine.pop());
-                }
-            ),
-            primitive(
-                "R>", interpreter -> {
-                    var machine = interpreter.machine();
-                    machine.push(machine.popReturn());
-                }
-            ),
-            primitive(
-                "R@", interpreter -> {
-                    var machine = interpreter.machine();
-                    machine.push(machine.peekReturn());
-                }
-            ),
-            primitive(
-                ".", interpreter -> {
-                    var machine = interpreter.machine();
-                    interpreter.print(formatted(machine, machine.pop()) + " ");
-                }
-            ),
-            primitive(
-                ".R", interpreter -> {
-                    var machine = interpreter.machine();
-                    var width = (int) machine.pop();
-                    var text = formatted(machine, machine.pop());
-                    interpreter.print(" ".repeat(Math.max(0, width - text.length())) + text);
-                }
-            ),
-            primitive(
-                ".S", interpreter -> {
-                    var machine = interpreter.machine();
-                    var stack = machine.stack();
-                    var text = new StringBuilder("<").append(stack.length).append("> ");
-                    for (var value : stack) {
-                        text.append(formatted(machine, value)).append(' ');
-                    }
-                    interpreter.print(text.toString());
-                }
-            ),
-            primitive(
-                "BASE", interpreter -> {
-                    var machine = interpreter.machine();
-                    machine.push(machine.baseAddress());
-                }
-            ),
-            primitive(
-                "EMIT", interpreter ->
-                    interpreter.print((char) interpreter.machine().pop())
-            ),
-            primitive("CR", interpreter -> interpreter.print('\n')),
-            immediate(
-                ".\"", interpreter -> {
-                    var text = interpreter.readUntil('"');
-                    if (interpreter.machine().compiling()) {
-                        interpreter.append(Word.primitive("(.\")", inner -> inner.print(text)));
-                    } else {
-                        interpreter.print(text);
-                    }
-                }
-            ),
-            immediate(
-                "S\"", interpreter -> {
-                    var text = interpreter.readUntil('"');
-                    var machine = interpreter.machine();
-                    var address = machine.allot(text.length());
-                    for (var i = 0; i < text.length(); i++) {
-                        machine.store(address + i, text.charAt(i));
-                    }
-                    if (machine.compiling()) {
-                        interpreter.append(Word.literal(address));
-                        interpreter.append(Word.literal(text.length()));
-                    } else {
-                        machine.push(address);
-                        machine.push(text.length());
-                    }
-                }
-            ),
-            primitive(
-                "TYPE", interpreter ->
-                    interpreter.print(poppedString(interpreter.machine()))
-            ),
-            primitive(
-                "EVALUATE", interpreter ->
-                    interpreter.evaluate(poppedString(interpreter.machine()))
-            ),
-            immediate("(", interpreter -> interpreter.readUntil(')')),
-            immediate("\\", InterpreterImpl::readRestOfLine),
-            primitive(":", interpreter -> interpreter.beginDefinition(interpreter.word(":"))),
-            immediate(";", InterpreterImpl::endDefinition),
-            primitive("IMMEDIATE", InterpreterImpl::makeLatestImmediate),
-            immediate("DOES>", interpreter -> interpreter.open().beginTail()),
-            primitive(
-                "CONSTANT", interpreter -> {
-                    var name = interpreter.word("CONSTANT");
-                    var value = interpreter.machine().pop();
-                    interpreter.define(Word.primitive(name, inner -> inner.machine().push(value)));
-                }
-            ),
-            primitive(
-                "VARIABLE", interpreter -> {
-                    var name = interpreter.word("VARIABLE");
-                    long address = interpreter.machine().allot(1);
-                    interpreter.define(Word.primitive(name, inner -> inner.machine().push(address)));
-                }
-            ),
-            primitive(
-                "@", interpreter -> {
-                    var machine = interpreter.machine();
-                    machine.push(machine.fetch(machine.pop()));
-                }
-            ),
-            primitive(
-                "!", interpreter -> {
-                    var machine = interpreter.machine();
-                    var address = machine.pop();
-                    machine.store(address, machine.pop());
-                }
-            ),
-            primitive(
-                "HERE", interpreter -> {
-                    var machine = interpreter.machine();
-                    machine.push(machine.here());
-                }
-            ),
-            primitive(
-                "ALLOT", interpreter -> {
-                    var machine = interpreter.machine();
-                    machine.allot((int) machine.pop());
-                }
-            ),
-            unary("CELLS", cells -> cells),
-            primitive(
-                "+!", interpreter -> {
-                    var machine = interpreter.machine();
-                    var address = machine.pop();
-                    machine.store(address, machine.fetch(address) + machine.pop());
-                }
-            ),
-            primitive(
-                ",", interpreter -> {
-                    var machine = interpreter.machine();
-                    machine.store(machine.allot(1), machine.pop());
-                }
-            ),
-            primitive(
-                "CREATE", interpreter -> {
-                    var name = interpreter.word("CREATE");
-                    long address = interpreter.machine().here();
-                    interpreter.define(Word.primitive(name, false, inner -> inner.machine().push(address)));
-                }
-            ),
-            immediate(
-                "IF", interpreter -> {
-                    var at = interpreter.open().size();
-                    interpreter.append(Word.zeroBranch(-1));
-                    interpreter.machine().push(at);
-                }
-            ),
-            immediate(
-                "ELSE", interpreter -> {
-                    var machine = interpreter.machine();
-                    var ifAt = (int) machine.pop();
-                    var elseAt = interpreter.open().size();
-                    interpreter.append(Word.branch(-1));
-                    interpreter.open().resolve(ifAt, interpreter.open().size());
-                    machine.push(elseAt);
-                }
-            ),
-            immediate(
-                "THEN", interpreter -> {
-                    var at = (int) interpreter.machine().pop();
-                    interpreter.open().resolve(at, interpreter.open().size());
-                }
-            ),
-            immediate(
-                "BEGIN", interpreter ->
-                    interpreter.machine().push(interpreter.open().size())
-            ),
-            immediate(
-                "UNTIL", interpreter ->
-                    interpreter.append(Word.zeroBranch((int) interpreter.machine().pop()))
-            ),
-            immediate(
-                "WHILE", interpreter -> {
-                    var at = interpreter.open().size();
-                    interpreter.append(Word.zeroBranch(-1));
-                    interpreter.machine().push(at);
-                }
-            ),
-            immediate(
-                "REPEAT", interpreter -> {
-                    var machine = interpreter.machine();
-                    var whileAt = (int) machine.pop();
-                    var dest = (int) machine.pop();
-                    interpreter.append(Word.branch(dest));
-                    interpreter.open().resolve(whileAt, interpreter.open().size());
-                }
-            ),
-            immediate(
-                "DO", interpreter -> {
-                    interpreter.append(DO_RUNTIME);
-                    interpreter.open().beginLoop();
-                    interpreter.machine().push(interpreter.open().size());
-                }
-            ),
-            immediate(
-                "?DO", interpreter -> {
-                    interpreter.append(QDO_RUNTIME);
-                    var open = interpreter.open();
-                    open.beginLoop();
-                    var skip = open.size();
-                    interpreter.append(Word.zeroBranch(-1));
-                    open.addLeave(skip);
-                    interpreter.machine().push(open.size());
-                }
-            ),
-            immediate("LOOP", interpreter -> closeLoop(interpreter, LOOP_RUNTIME)),
-            immediate("+LOOP", interpreter -> closeLoop(interpreter, PLUS_LOOP_RUNTIME)),
-            immediate(
-                "LEAVE", interpreter -> {
-                    interpreter.append(UNLOOP_RUNTIME);
-                    var at = interpreter.open().size();
-                    interpreter.append(Word.branch(-1));
-                    interpreter.open().addLeave(at);
-                }
-            ),
-            immediate(
-                "EXIT", interpreter ->
-                    interpreter.append(Word.branch(Integer.MAX_VALUE))
-            ),
-            immediate(
-                "RECURSE", interpreter ->
-                    interpreter.append(interpreter.open().recurse())
-            ),
-            primitive(
-                "I", interpreter -> {
-                    var machine = interpreter.machine();
-                    machine.push(index(machine.peekReturn(), machine.peekReturn(1)));
-                }
-            ),
-            primitive(
-                "J", interpreter -> {
-                    var machine = interpreter.machine();
-                    machine.push(index(machine.peekReturn(2), machine.peekReturn(3)));
-                }
-            ),
-            primitive(
-                "WORDS", interpreter -> {
-                    interpreter.print(interpreter.dictionary().words()
-                        .map(Word::name)
-                        .distinct()
-                        .collect(Collectors.joining(" ")));
-                    interpreter.print('\n');
-                }
-            ),
-            primitive(
-                "SEE", interpreter -> {
-                    var name = interpreter.word("SEE");
-                    var word = interpreter.dictionary().lookup(name)
-                        .orElseThrow(() -> new FjorthException(name + " ?"));
-                    interpreter.print(render(word));
-                }
-            )
-        );
     }
 
     private static String render(Word word) {
@@ -441,10 +439,12 @@ final class Primitives {
         }
     }
 
-    // Loop counters live on the return stack biased: slot = index - limit + MIN_VALUE.
-    // The ANS limit-1/limit boundary then sits exactly at MAX_VALUE/MIN_VALUE, so
-    // "index crossed the boundary" == "slot + increment overflowed", correct even when
-    // the index itself wraps the 64-bit range. I/J reconstruct via index().
+    /// Loop counters live on the return stack biased: `slot = index - limit + MIN_VALUE`.
+    /// The ANS limit-1/limit boundary then sits exactly at `MAX_VALUE`/`MIN_VALUE`, so:
+    ///
+    /// > _index crossed the boundary_ == _slot + increment overflowed_
+    ///
+    /// Correct even when the index itself wraps the 64-bit range. `I`/`J` reconstruct via [index][#index(long, long)].
     private static long slot(long index, long limit) {
         return index - limit + Long.MIN_VALUE;
     }
@@ -454,9 +454,10 @@ final class Primitives {
     }
 
     private static void closeLoop(InterpreterImpl interpreter, Word runtime) {
+        var machine = interpreter.machine();
         var open = interpreter.open();
         var leaves = open.endLoop();
-        var dest = (int) interpreter.machine().pop();
+        var dest = toIntExact(machine.pop());
         interpreter.append(runtime);
         interpreter.append(Word.zeroBranch(dest));
         var after = open.size();

@@ -9,7 +9,7 @@ class DictionaryTest {
 
     @Test
     void emptyDictionaryFindsNothing() {
-        assertTrue(Dictionary.EMPTY.lookup("DUP").isEmpty());
+        assertTrue(Dictionary.empty().lookup("DUP").isEmpty());
     }
 
     @Test
@@ -37,7 +37,7 @@ class DictionaryTest {
 
     @Test
     void defineDoesNotMutateOriginal() {
-        var base = Dictionary.EMPTY;
+        var base = Dictionary.empty();
         var extended = base.define(primitive("DUP"));
         assertTrue(base.lookup("DUP").isEmpty());
         assertTrue(extended.lookup("DUP").isPresent());
@@ -47,8 +47,7 @@ class DictionaryTest {
     void compiledReferenceSurvivesRedefinition() {
         var first = primitive("X");
         Word caller = Word.colon("CALLER", false, List.of(first));
-        var dictionary = Dictionary.EMPTY
-            .define(first)
+        var dictionary = Dictionary.of(first)
             .define(caller)
             .define(primitive("X"));
         var found = dictionary.lookup("CALLER");
@@ -59,8 +58,10 @@ class DictionaryTest {
 
     private static Word primitive(String name) {
         return new Word.Primitive(
-            name, false, machine -> {
-        }
+            name,
+            false,
+            _ -> {
+            }
         );
     }
 }

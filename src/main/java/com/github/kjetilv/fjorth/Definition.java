@@ -12,7 +12,7 @@ final class Definition {
 
     private final Deque<List<Integer>> loops = new ArrayDeque<>();
 
-    /// Held in an array to allow mutation in lambdas
+    /// Works as a _final but mutable cell_ to allow new values set from lambdas
     private final Word[] self = new Word[1];
 
     Definition(String name) {

@@ -101,7 +101,6 @@ class CompilerTest {
     @Test
     void errorRecoveryDiscardsOpenDefinition() {
         assertInstanceOf(Failed.class, interpreter.interpret(": BROKEN frobnicate"));
-        interpreter.reset();
         assertArrayEquals(new long[] {3}, stackAfter("1 2 +"));
         assertInstanceOf(Failed.class, interpreter.interpret("BROKEN"));
     }

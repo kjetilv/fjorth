@@ -4,11 +4,15 @@ import module java.base;
 
 final class Dictionary {
 
-    public static Dictionary of(Word word) {
-        return EMPTY.define(word);
+    public static Dictionary empty() {
+        return new Dictionary(null, null, null);
     }
 
-    public static Dictionary of(List<Word> words) {
+    public static Dictionary of(Word word) {
+        return new Dictionary(null, word, null);
+    }
+
+    static Dictionary unsealed(List<Word> words) {
         return new Dictionary(null, null, words);
     }
 
@@ -25,14 +29,13 @@ final class Dictionary {
         Word word,
         List<Word> words
     ) {
-        this(
-            parent,
-            words == null ? null : toMap(words),
-            word,
-            word instanceof Word.Primitive(var name, var _, var _) ? lc(name)
-                : word instanceof Word.Colon(var name, var _, var _) ? lc(name)
-                    : null
-        );
+        var map = words == null
+            ? null
+            : toMap(words);
+        var wordLc = word instanceof Word.Primitive(var name, var _, var _) ? lc(name)
+            : word instanceof Word.Colon(var name, var _, var _) ? lc(name)
+                : null;
+        this(parent, map, word, wordLc);
     }
 
     private Dictionary(

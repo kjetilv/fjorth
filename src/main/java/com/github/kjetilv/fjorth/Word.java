@@ -28,9 +28,11 @@ sealed interface Word {
         return new ZeroBranch(target);
     }
 
-    String name();
+    default boolean immediate() {
+        return false;
+    }
 
-    boolean immediate();
+    String name();
 
     record Primitive(String name, boolean immediate, Effect effect) implements Word {
     }
@@ -49,10 +51,6 @@ sealed interface Word {
             return "(literal)";
         }
 
-        @Override
-        public boolean immediate() {
-            return false;
-        }
     }
 
     record Branch(int target) implements Word {
@@ -62,10 +60,6 @@ sealed interface Word {
             return "(branch)";
         }
 
-        @Override
-        public boolean immediate() {
-            return false;
-        }
     }
 
     record ZeroBranch(int target) implements Word {
@@ -75,10 +69,6 @@ sealed interface Word {
             return "(0branch)";
         }
 
-        @Override
-        public boolean immediate() {
-            return false;
-        }
     }
 
     @FunctionalInterface

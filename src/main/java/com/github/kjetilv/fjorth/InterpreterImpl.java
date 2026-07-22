@@ -9,7 +9,12 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 final class InterpreterImpl implements Interpreter {
 
     static InterpreterImpl unsealed(MachineImpl machine, Console console) {
-        return new InterpreterImpl(machine, Primitives.unsealedDictionary(), console, false);
+        return new InterpreterImpl(
+            machine,
+            Dictionary.unsealed(Primitives.WORDS),
+            console,
+            false
+        );
     }
 
     private final MachineImpl machine;
@@ -41,7 +46,7 @@ final class InterpreterImpl implements Interpreter {
             input = line;
             pos = 0;
             try {
-                tokens().forEach(this::process);
+                processTokens();
             } finally {
                 console.flush();
             }
@@ -53,17 +58,6 @@ final class InterpreterImpl implements Interpreter {
                 reset();
             }
         }
-    }
-
-    @Override
-    public void reset() {
-        machine.reset();
-        definition = null;
-    }
-
-    @Override
-    public Console console() {
-        return this.console;
     }
 
     InterpreterImpl loadLibrary(String libraryResource) {
@@ -93,7 +87,7 @@ final class InterpreterImpl implements Interpreter {
         input = text;
         pos = 0;
         try {
-            tokens().forEach(this::process);
+            processTokens();
         } finally {
             input = savedInput;
             pos = savedPos;
@@ -140,8 +134,11 @@ final class InterpreterImpl implements Interpreter {
     }
 
     String word(String requester) {
-        return nextToken()
-            .orElseThrow(() -> new FjorthException(requester + ": missing name"));
+        var next = nextToken();
+        if (next == null) {
+            throw new FjorthException(requester + ": missing name");
+        }
+        return next;
     }
 
     void print(String text) {
@@ -195,44 +192,22 @@ final class InterpreterImpl implements Interpreter {
         return definition;
     }
 
-    InterpreterImpl seal() {
-        return new InterpreterImpl(
-            machine,
-            dictionary.seal(),
-            console,
-            true
-        );
+    Interpreter seal() {
+        return new InterpreterImpl(machine, dictionary.seal(), console, true);
     }
 
-    private void process(String token) {
-        try {
-            handle(token);
-        } catch (FjorthException e) {
-            throw e.locate(input, tokenStart);
+    private void processTokens() {
+        while (true) {
+            String token = nextToken();
+            if (token == null) {
+                return;
+            }
+            try {
+                handle(token);
+            } catch (FjorthException e) {
+                throw e.locate(input, tokenStart);
+            }
         }
-    }
-
-    private void run(Word.Colon colon) {
-        var body = colon.body();
-        var pointer = 0;
-        while (pointer < body.size()) {
-            pointer = switch (body.get(pointer)) {
-                case Word.Branch(var nextPointer) -> nextPointer;
-                case Word.ZeroBranch(var nextPointer) -> machine.pop() == 0
-                    ? nextPointer
-                    : pointer + 1;
-                case Word word -> {
-                    execute(word);
-                    yield pointer + 1;
-                }
-            };
-        }
-    }
-
-    private Stream<String> tokens() {
-        return Stream.generate(this::nextToken)
-            .takeWhile(Optional::isPresent)
-            .flatMap(Optional::stream);
     }
 
     private void handle(String token) {
@@ -254,12 +229,34 @@ final class InterpreterImpl implements Interpreter {
         }
     }
 
-    private Optional<String> nextToken() {
+    private void run(Word.Colon colon) {
+        var body = colon.body();
+        var pointer = 0;
+        while (pointer < body.size()) {
+            pointer = switch (body.get(pointer)) {
+                case Word.Branch(var nextPointer) -> nextPointer;
+                case Word.ZeroBranch(var nextPointer) -> machine.pop() == 0
+                    ? nextPointer
+                    : pointer + 1;
+                case Word word -> {
+                    execute(word);
+                    yield pointer + 1;
+                }
+            };
+        }
+    }
+
+    private void reset() {
+        machine.reset();
+        definition = null;
+    }
+
+    private String nextToken() {
         while (pos < input.length() && Character.isWhitespace(input.charAt(pos))) {
             pos++;
         }
         if (pos == input.length()) {
-            return Optional.empty();
+            return null;
         }
         tokenStart = pos;
         while (pos < input.length() && !Character.isWhitespace(input.charAt(pos))) {
@@ -269,7 +266,7 @@ final class InterpreterImpl implements Interpreter {
         if (pos < input.length()) {
             pos++;
         }
-        return Optional.of(token);
+        return token;
     }
 
     private long number(String token) {
