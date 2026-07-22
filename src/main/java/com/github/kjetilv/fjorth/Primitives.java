@@ -6,23 +6,26 @@ final class Primitives {
 
     @SuppressWarnings("Convert2MethodRef")
     public static final List<Word> WORDS = List.of(
-        immediate("ABORT", interpreter -> {
-            interpreter.reset();
-        }),
-        immediate("ABORT\"", interpreter -> {
-            var text = interpreter.readUntil('"');
-            var machine = interpreter.machine();
-            if (machine.compiling()) {
-                interpreter.append(Word.primitive(
-                    "(.\")",
-                    _ -> interpreter.print(text)
-                ));
-                machine.compiling(false);
-            } else {
-                interpreter.print(text);
+        immediate(
+            "ABORT", interpreter ->
+                interpreter.reset()
+        ),
+        immediate(
+            "ABORT\"", interpreter -> {
+                var text = interpreter.readUntil('"');
+                var machine = interpreter.machine();
+                if (machine.compiling()) {
+                    interpreter.append(Word.primitive(
+                        "(.\")",
+                        _ -> interpreter.print(text)
+                    ));
+                    machine.compiling(false);
+                } else {
+                    interpreter.print(text);
+                }
+                interpreter.reset();
             }
-            interpreter.reset();
-        }),
+        ),
         primitive(
             "DUP", interpreter -> {
                 var machine = interpreter.machine();

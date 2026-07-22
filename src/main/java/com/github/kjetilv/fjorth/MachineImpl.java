@@ -47,11 +47,11 @@ public final class MachineImpl implements Machine {
             .seal();
     }
 
-    public char charAt(long address) {
+    char charAt(long address) {
         return asChar(memory[checkAddress(address)]);
     }
 
-    public char cpop() {
+    char cpop() {
         return asChar(pop());
     }
 

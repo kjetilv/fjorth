@@ -12,6 +12,7 @@ final class Dictionary {
         return new Dictionary(null, word, null);
     }
 
+    @SuppressWarnings("SameParameterValue")
     static Dictionary unsealed(List<Word> words) {
         return new Dictionary(null, null, words);
     }
@@ -103,8 +104,6 @@ final class Dictionary {
             : parent != null ? parent.lookupLc(nameLc)
                 : Optional.empty();
     }
-
-    static final Dictionary EMPTY = new Dictionary(null, null, null);
 
     private static LinkedHashMap<String, Word> toMap(List<Word> words) {
         return words.stream()
