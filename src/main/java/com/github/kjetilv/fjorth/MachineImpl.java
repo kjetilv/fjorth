@@ -2,7 +2,7 @@ package com.github.kjetilv.fjorth;
 
 import module java.base;
 
-@SuppressWarnings("UnusedReturnValue")
+@SuppressWarnings({"UnusedReturnValue", "unused"})
 public final class MachineImpl implements Machine {
 
     public static final int CHAR_MASK = 0xFFFF;
