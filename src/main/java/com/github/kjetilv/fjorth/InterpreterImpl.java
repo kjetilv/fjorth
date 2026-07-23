@@ -4,18 +4,20 @@ import module java.base;
 
 import com.github.kjetilv.fjorth.Interpreter.Result.Failed;
 
+import static com.github.kjetilv.fjorth.Primitives.*;
+
 final class InterpreterImpl implements Interpreter {
 
-    static InterpreterImpl unsealed(MachineImpl machine, Console console) {
+    static InterpreterImpl unsealed(MachineApi machine, Console console) {
         return new InterpreterImpl(
             machine,
-            Dictionary.unsealed(Primitives.WORDS),
+            Dictionary.unsealed(WORDS),
             console,
             false
         );
     }
 
-    private final MachineImpl machine;
+    private final MachineApi machine;
 
     private final Console console;
 
@@ -32,7 +34,7 @@ final class InterpreterImpl implements Interpreter {
     private int tokenStart;
 
     private InterpreterImpl(
-        MachineImpl machine,
+        MachineApi machine,
         Dictionary dictionary,
         Console console,
         boolean sealed
@@ -165,7 +167,7 @@ final class InterpreterImpl implements Interpreter {
         }
     }
 
-    MachineImpl machine() {
+    MachineApi machine() {
         return machine;
     }
 
@@ -200,7 +202,50 @@ final class InterpreterImpl implements Interpreter {
     }
 
     private void effect(Word.Effect effect) {
-        effect.apply(this);
+        switch (effect) {
+            case ReadRestOfLine readRestOfLine -> readRestOfLine.apply(this);
+            case ReadToRightPar readToRightPar -> readToRightPar.apply(this);
+            case BinaryOp binaryOp -> binaryOp.apply(this);
+            case Dup dup -> dup.apply(this);
+            case Drop drop -> drop.apply(this);
+            case Swap swap -> swap.apply(this);
+            case Over over -> over.apply(this);
+            case I i -> i.apply(this);
+            case SQuote sQuote -> sQuote.apply(this);
+            case BeginDefinition beginDefinition -> beginDefinition.apply(this);
+            case EndDefinition endDefinition -> endDefinition.apply(this);
+            case Base base -> base.apply(this);
+            case Fetch fetch -> fetch.apply(this);
+            case Store store -> store.apply(this);
+            case FetchChar fetchChar -> fetchChar.apply(this);
+            case StoreChar storeChar -> storeChar.apply(this);
+            case AddStore addStore -> addStore.apply(this);
+            case Comma comma -> comma.apply(this);
+            case Allot allot -> allot.apply(this);
+            case Here here -> here.apply(this);
+            case Dot dot -> dot.apply(this);
+            case DotR dotR -> dotR.apply(this);
+            case DotS dotS -> dotS.apply(this);
+            case DotQuote dotQuote -> dotQuote.apply(this);
+            case Rot rot -> rot.apply(this);
+            case Constant constant -> constant.apply(this);
+            case Variable variable-> variable.apply(this);
+            case Do do_ -> do_.apply(this);
+            case QDo qDo -> qDo.apply(this);
+            case See see -> see.apply(this);
+            case UnaryOp unaryOp -> unaryOp.apply(this);
+            case PushReturn pushReturn -> pushReturn.apply(this);
+            case PopReturn popReturn -> popReturn.apply(this);
+            case PeekReturn peekReturn -> peekReturn.apply(this);
+            case Type type -> type.apply(this);
+            case Emit emit -> emit.apply(this);
+            case Evaluate evaluate -> evaluate.apply(this);
+            case Create create -> create.apply(this);
+            case Loop loop -> loop.apply(this);
+            case PlusLoop plusLoop -> plusLoop.apply(this);
+            case Noop _ -> {}
+            default -> effect.apply(this);
+        }
     }
 
     private void processTokens() {

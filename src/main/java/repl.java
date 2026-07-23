@@ -1,9 +1,6 @@
-import com.github.kjetilv.fjorth.Console;
-import com.github.kjetilv.fjorth.Consoles;
-import com.github.kjetilv.fjorth.Interpreter;
+import com.github.kjetilv.fjorth.*;
 import com.github.kjetilv.fjorth.Interpreter.Result.Failed;
 import com.github.kjetilv.fjorth.Interpreter.Result.OK;
-import com.github.kjetilv.fjorth.Machine;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -90,7 +87,7 @@ private boolean evaluate(String line) {
 
 private static final Console CONSOLE = Consoles.stdout();
 
-private static final Interpreter INTERPRETER = Machine.create().interpreter(CONSOLE);
+private static final Interpreter INTERPRETER = HeapMachine.create().interpreter(CONSOLE);
 
 private static BufferedReader stdin() {
     return new BufferedReader(new InputStreamReader(System.in));

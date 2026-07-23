@@ -1,8 +1,9 @@
 package com.github.kjetilv.fjorth;
 
 import module java.base;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class FibTest extends InterpreterTestCase{
 
@@ -10,6 +11,6 @@ public class FibTest extends InterpreterTestCase{
     void fibonacci() {
         interpretResource("fib.fs");
         interpret("main");
-        Assertions.assertEquals("9227465", output().trim());
+        assertEquals("9227465", output().trim());
     }
 }

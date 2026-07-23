@@ -237,7 +237,7 @@ about what the latest word is (ANS restricts to CREATEd; not enforced).
 
 ## Tests (src/test/java/com/github/kjetilv/fjorth/, 141 total)
 
-`MachineTest`, `DictionaryTest` (construct core types directly);
+`HeapMachineTest`, `DictionaryTest` (construct core types directly);
 `InterpreterImplTest`, `CompilerTest`, `ControlFlowTest`, `MemoryTest`,
 `PolishTest`, `StringNumberTest`, `DoesTest`, `EvaluateTest` — all use the
 fixture: fields `Machine machine`, `StringWriter output`,

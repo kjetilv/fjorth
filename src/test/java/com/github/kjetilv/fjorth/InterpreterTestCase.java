@@ -14,7 +14,7 @@ public class InterpreterTestCase {
         interpreter.reset(baseDictionary);
     }
 
-    static MachineImpl machine() {
+    static MachineApi machine() {
         return machine;
     }
 
@@ -31,12 +31,7 @@ public class InterpreterTestCase {
         return output.toString();
     }
 
-    @BeforeEach
-    void setup() {
-        reset();
-    }
-
-    void interpretResource(String resource) {
+    static void interpretResource(String resource) {
         Optional.ofNullable(Thread.currentThread().getContextClassLoader().getResourceAsStream(resource))
             .ifPresentOrElse(
                 inputStream -> {
@@ -44,7 +39,7 @@ public class InterpreterTestCase {
                         var bufferedReader = new BufferedReader(new InputStreamReader(inputStream, UTF_8))
                     ) {
                         bufferedReader.lines()
-                            .forEach(this::interpret);
+                            .forEach(InterpreterTestCase::interpret);
                     } catch (Exception e) {
                         throw new IllegalStateException("Failed to load " + resource, e);
                     }
@@ -55,7 +50,7 @@ public class InterpreterTestCase {
             );
     }
 
-    void interpret(String line) {
+    static void interpret(String line) {
         var interpret = interpreter.interpret(line);
         assertInstanceOf(
             Interpreter.Result.OK.class,
@@ -64,24 +59,29 @@ public class InterpreterTestCase {
         );
     }
 
-    String outputOf(String line) {
+    static String outputOf(String line) {
         interpret(line);
         return output.toString();
     }
 
-    void stackAfter(String line, long... values) {
+    static void stackAfter(String line, long... values) {
         interpret(line);
         assertArrayEquals(values, machine.stack());
     }
 
-    void emptyStackAfter(String line) {
+    static void emptyStackAfter(String line) {
         interpret(line);
         assertArrayEquals(new long[] {}, machine.stack());
     }
 
-    private static final StringBuilder output = new StringBuilder();
+    @BeforeEach
+    void setup() {
+        reset();
+    }
 
-    static final MachineImpl machine = new MachineImpl();
+    static final MachineApi machine = new HeapMachine();
+
+    private static final StringBuilder output = new StringBuilder();
 
     static final InterpreterImpl interpreter = (InterpreterImpl)
         machine.interpreter(Consoles.to(output));

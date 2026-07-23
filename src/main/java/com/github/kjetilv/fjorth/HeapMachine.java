@@ -3,9 +3,13 @@ package com.github.kjetilv.fjorth;
 import module java.base;
 
 @SuppressWarnings({"UnusedReturnValue", "unused"})
-public final class MachineImpl implements Machine {
+public final class HeapMachine implements MachineApi {
 
     public static final int CHAR_MASK = 0xFFFF;
+
+    public static Machine create() {
+        return new HeapMachine();
+    }
 
     private final long[] data;
 
@@ -25,15 +29,15 @@ public final class MachineImpl implements Machine {
 
     private boolean compiling;
 
-    MachineImpl() {
+    HeapMachine() {
         this(-1, -1);
     }
 
-    MachineImpl(int dataStackSize, int returnStackSize) {
+    HeapMachine(int dataStackSize, int returnStackSize) {
         this(dataStackSize, returnStackSize, -1);
     }
 
-    MachineImpl(int dataStackSize, int returnStackSize, int memoryCells) {
+    HeapMachine(int dataStackSize, int returnStackSize, int memoryCells) {
         this.data = new long[dataStackSize > 0 ? dataStackSize : DEFAULT_STACK_SIZE];
         this.returns = new long[returnStackSize > 0 ? returnStackSize : DEFAULT_STACK_SIZE];
         this.memory = new long[memoryCells > 0 ? memoryCells : DEFAULT_MEMORY_CELLS];
@@ -48,36 +52,43 @@ public final class MachineImpl implements Machine {
             : build(console);
     }
 
-    char charAt(long address) {
+    @Override
+    public char charAt(long address) {
         return asChar(memory[checkAddress(address)]);
     }
 
-    char cpop() {
+    @Override
+    public char cpop() {
         return asChar(pop());
     }
 
-    long[] stack() {
+    @Override
+    public long[] stack() {
         return Arrays.copyOf(data, dataTop);
     }
 
-    int baseAddress() {
+    @Override
+    public int baseAddress() {
         return baseAddress;
     }
 
-    int base() {
+    @Override
+    public int base() {
         var base = fetch(baseAddress);
         return 2 <= base && base <= 36
             ? (int) base
             : fail("invalid BASE: " + base);
     }
 
-    void push(long value) {
+    @Override
+    public void push(long value) {
         checkOverflow();
         data[dataTop] = value;
         dataTop++;
     }
 
-    int ipop() {
+    @Override
+    public int ipop() {
         var pop = pop();
         try {
             return Math.toIntExact(pop);
@@ -86,57 +97,67 @@ public final class MachineImpl implements Machine {
         }
     }
 
-    long pop() {
+    @Override
+    public long pop() {
         checkUnderflow();
         dataTop--;
         return data[dataTop];
     }
 
-    long peek() {
+    @Override
+    public long peek() {
         return dataTop == 0
             ? fail("stack underflow")
             : data[dataTop - 1];
     }
 
-    long peek(int offset) {
+    @Override
+    public long peek(int offset) {
         return dataTop > offset
             ? data[dataTop - 1 - offset]
             : fail("stack underflow");
     }
 
-    int depth() {
+    @Override
+    public int depth() {
         return dataTop;
     }
 
-    void pushReturn(long value) {
+    @Override
+    public void pushReturn(long value) {
         checkReturnOverflow();
         returns[returnsTop] = value;
         returnsTop++;
     }
 
-    long popReturn() {
+    @Override
+    public long popReturn() {
         checkReturnUnderflow();
         returnsTop--;
         return returns[returnsTop];
     }
 
-    long peekReturn() {
+    @Override
+    public long peekReturn() {
         return returnsTop == 0
             ? fail("return stack underflow")
             : returns[returnsTop - 1];
     }
 
-    long peekReturn(int offset) {
+    @Override
+    public long peekReturn(int offset) {
         return returnsTop > offset
             ? returns[returnsTop - 1 - offset]
             : fail("return stack underflow");
     }
 
-    int returnDepth() {
+    @Override
+    public int returnDepth() {
         return returnsTop;
     }
 
-    int allot(int cells) {
+    @Override
+    public int allot(int cells) {
         if (here + cells > memory.length) {
             return fail("memory exhausted");
         }
@@ -148,19 +169,23 @@ public final class MachineImpl implements Machine {
         return address;
     }
 
-    int here() {
+    @Override
+    public int here() {
         return here;
     }
 
-    long fetch(long address) {
+    @Override
+    public long fetch(long address) {
         return memory[checkAddress(address)];
     }
 
-    void store(long address, long value) {
+    @Override
+    public void store(long address, long value) {
         memory[checkAddress(address)] = value;
     }
 
-    void store(long address, long count, long value) {
+    @Override
+    public void store(long address, long count, long value) {
         if (count > 0) {
             var addr = checkAddress(address);
             var toAddr = checkAddress(address + count);
@@ -170,15 +195,18 @@ public final class MachineImpl implements Machine {
         }
     }
 
-    boolean compiling() {
+    @Override
+    public boolean compiling() {
         return compiling;
     }
 
-    void compiling(boolean compiling) {
+    @Override
+    public void compiling(boolean compiling) {
         this.compiling = compiling;
     }
 
-    void reset() {
+    @Override
+    public void reset() {
         dataTop = 0;
         returnsTop = 0;
         here = 1;
