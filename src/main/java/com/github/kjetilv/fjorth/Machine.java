@@ -7,8 +7,12 @@ public interface Machine {
     }
 
     default Interpreter interpreter() {
-        return interpreter(null);
+        return interpreter(null, true);
     }
 
-    Interpreter interpreter(Console console);
+    default Interpreter interpreter(Console console) {
+        return interpreter(console, false);
+    }
+
+    Interpreter interpreter(Console console, boolean canonical);
 }

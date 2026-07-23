@@ -1,4 +1,5 @@
 import com.github.kjetilv.fjorth.Console;
+import com.github.kjetilv.fjorth.Consoles;
 import com.github.kjetilv.fjorth.Interpreter;
 import com.github.kjetilv.fjorth.Interpreter.Result.Failed;
 import com.github.kjetilv.fjorth.Interpreter.Result.OK;
@@ -15,6 +16,24 @@ import java.util.stream.Stream;
 
 ///  Salty Fjorð!
 void main(String[] args) {
+    if (args.length == 0) {
+        evaluateStdin();
+    } else {
+        evaluateArgumentFules(args);
+    }
+}
+
+private void evaluateStdin() {
+    CONSOLE.println("fjorth");
+    try (var in = stdin()) {
+        in.lines()
+            .forEach(this::evaluate);
+    } catch (Exception e) {
+        throw new IllegalStateException("Run failed", e);
+    }
+}
+
+private void evaluateArgumentFules(String[] args) {
     Arrays.stream(args)
         .peek(arg -> CONSOLE.println("*** evaluating file " + arg))
         .map(Path::of)
@@ -23,13 +42,6 @@ void main(String[] args) {
                 .ifPresent(failingLine -> {
                     throw new IllegalStateException("Failed to evaluate " + file + ", failing line: " + failingLine);
                 }));
-    CONSOLE.println("fjorth");
-    try (var in = stdin()) {
-        in.lines()
-            .forEach(this::evaluate);
-    } catch (Exception e) {
-        throw new IllegalStateException("Run failed", e);
-    }
 }
 
 /// @param source         Source of lines
@@ -76,7 +88,7 @@ private boolean evaluate(String line) {
     };
 }
 
-private static final Console CONSOLE = Console.stdout();
+private static final Console CONSOLE = Consoles.stdout();
 
 private static final Interpreter INTERPRETER = Machine.create().interpreter(CONSOLE);
 

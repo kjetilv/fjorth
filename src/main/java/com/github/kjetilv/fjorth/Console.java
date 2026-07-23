@@ -4,18 +4,6 @@ import module java.base;
 
 public interface Console {
 
-    static Console stdout() {
-        return new PrintWriterConsole(System.out);
-    }
-
-    static Console to(PrintWriter output) {
-        return new PrintWriterConsole(output);
-    }
-
-    static Console to(StringWriter output) {
-        return new PrintWriterConsole(output);
-    }
-
     default void println(String s) {
         print(s);
         println();
@@ -30,7 +18,11 @@ public interface Console {
         print(Character.toString(c));
     }
 
-    void print(String string);
+    default void flush() {
+    }
 
-    void flush();
+    default void reset() {
+    }
+
+    void print(String string);
 }

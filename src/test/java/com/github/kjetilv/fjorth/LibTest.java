@@ -27,4 +27,14 @@ class LibTest extends InterpreterTestCase {
         interpret("+");
         assertEquals(30, machine().peek());
     }
+
+    @Test
+    void twoOver() {
+        stackAfter("1 2 3 4 2OVER", 1, 2, 3, 4, 1, 2);
+    }
+
+    @Test
+    void twoSwap() {
+        stackAfter("1 2 3 4 2SWAP", 3, 4, 1, 2);
+    }
 }

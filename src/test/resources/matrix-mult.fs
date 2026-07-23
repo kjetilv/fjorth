@@ -1,4 +1,3 @@
-.( Loading Matrix Multiplication benchmark...) cr
 \ NOTE: This version needs 0.5MB data space
 
 \ A classical benchmark of an O(n**3) algorithm; Matrix Multiplication
@@ -45,13 +44,11 @@ align create imr mat-byte-size allot
 : main  ( -- )
   initiate-seed
   ima initiate-matrix
-  imb initiate-matrix 
+  imb initiate-matrix
   imr ima mat-byte-size mybounds do
     imb row-byte-size mybounds do
-      j i innerproduct over ! cell+ 
+      j i innerproduct over ! cell+
     cell +loop
   row-size cells +loop
   drop
 ;
-
-

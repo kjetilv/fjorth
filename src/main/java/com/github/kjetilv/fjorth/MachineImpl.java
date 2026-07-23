@@ -13,6 +13,8 @@ public final class MachineImpl implements Machine {
 
     private final long[] memory;
 
+    private final AtomicReference<Interpreter> interpreter = new AtomicReference<>();
+
     private final int baseAddress;
 
     private int dataTop;
@@ -40,11 +42,10 @@ public final class MachineImpl implements Machine {
     }
 
     @Override
-    public Interpreter interpreter(Console console) {
-        return InterpreterImpl
-            .unsealed(this, console == null ? Console.stdout() : console)
-            .loadLibrary(LIBRARY_RESOURCE)
-            .seal();
+    public Interpreter interpreter(Console console, boolean canonical) {
+        return canonical
+            ? resolveCanonical(console)
+            : build(console);
     }
 
     char charAt(long address) {
@@ -180,7 +181,23 @@ public final class MachineImpl implements Machine {
     void reset() {
         dataTop = 0;
         returnsTop = 0;
+        here = 1;
         compiling = false;
+    }
+
+    private Interpreter resolveCanonical(Console console) {
+        return interpreter.updateAndGet(existing ->
+            existing == null
+                ? build(console)
+                : existing
+        );
+    }
+
+    private Interpreter build(Console console) {
+        return InterpreterImpl
+            .unsealed(this, console == null ? Consoles.stdout() : console)
+            .loadLibrary(LIBRARY_RESOURCE)
+            .seal();
     }
 
     private void checkOverflow() {

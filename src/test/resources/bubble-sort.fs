@@ -1,5 +1,3 @@
-.( Loading Bubble Sort benchmark...) cr
-
 \ A classical benchmark of an O(n**2) algorithm; Bubble sort
 \
 \ Part of the programs gathered by John Hennessy for the MIPS
@@ -39,7 +37,7 @@ align create list elements cells allot
   1 elements 1 do
     list elements i - cells mybounds do
       i 2@ > if i 2@ swap i 2! then
-    cell +loop 
+    cell +loop
   loop
 ;
 
@@ -54,11 +52,11 @@ align create list elements cells allot
   1 elements 1 do
     -1 list elements i - cells mybounds do
       i 2@ > if i 2@ swap i 2! drop 0 then
-    cell +loop 
+    cell +loop
     if leave then
   loop
 ;
-  
+
 : bubble-sort-with-flag ( -- )
   initiate-seed
   initiate-list
@@ -70,5 +68,3 @@ align create list elements cells allot
 	bubble-sort
 \	bubble-sort-with-flag
 ;
-
-

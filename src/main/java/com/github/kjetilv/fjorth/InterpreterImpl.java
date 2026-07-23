@@ -31,7 +31,12 @@ final class InterpreterImpl implements Interpreter {
 
     private int tokenStart;
 
-    private InterpreterImpl(MachineImpl machine, Dictionary dictionary, Console console, boolean sealed) {
+    private InterpreterImpl(
+        MachineImpl machine,
+        Dictionary dictionary,
+        Console console,
+        boolean sealed
+    ) {
         this.machine = Objects.requireNonNull(machine, "machine");
         this.dictionary = Objects.requireNonNull(dictionary, "dictionary");
         this.console = Objects.requireNonNull(console, "out");
@@ -105,17 +110,17 @@ final class InterpreterImpl implements Interpreter {
         if (sealed) {
             dictionary = dictionary.define(word);
         } else {
-            dictionary.defineInPlace(word);
+            dictionary.insert(word);
         }
     }
 
     void makeLatestImmediate() {
         var latest = dictionary.latest()
             .orElseThrow(() -> new FjorthException("IMMEDIATE: empty dictionary"));
-        if (!(latest instanceof Word.Colon(var name, var _, var body))) {
+        if (!(latest instanceof Word.Colon colon)) {
             throw new FjorthException("IMMEDIATE: not a colon definition: " + latest.name());
         }
-        dictionary = dictionary.define(new Word.Colon(name, true, body));
+        define(colon.asImmediate());
     }
 
     String word(String requester) {
@@ -152,8 +157,8 @@ final class InterpreterImpl implements Interpreter {
 
     void execute(Word word) {
         switch (word) {
-            case Word.Primitive primitive -> primitive.effect().apply(this);
-            case Word.Colon colon -> run(colon.body());
+            case Word.Primitive primitive -> effect(primitive.effect());
+            case Word.Colon colon -> executeAll(colon.body());
             case Word.Literal(var value) -> machine.push(value);
             case Word.Branch(var target) -> outsideDefinition(target);
             case Word.ZeroBranch(var target) -> outsideDefinition(target);
@@ -180,8 +185,22 @@ final class InterpreterImpl implements Interpreter {
     }
 
     void reset() {
-        machine.reset();
-        definition = null;
+        reset(null);
+    }
+
+    void reset(Dictionary dictionary) {
+        this.machine.reset();
+        this.input = "";
+        this.pos = 0;
+        this.tokenStart = 0;
+        this.definition = null;
+        if (dictionary != null) {
+            this.dictionary = dictionary;
+        }
+    }
+
+    private void effect(Word.Effect effect) {
+        effect.apply(this);
     }
 
     private void processTokens() {
@@ -238,7 +257,7 @@ final class InterpreterImpl implements Interpreter {
         }
     }
 
-    private void run(List<Word> body) {
+    private void executeAll(List<Word> body) {
         var pointer = 0;
         while (pointer < body.size()) {
             pointer = switch (body.get(pointer)) {

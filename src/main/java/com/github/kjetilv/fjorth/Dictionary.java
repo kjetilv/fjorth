@@ -51,7 +51,7 @@ final class Dictionary {
         this.wordLc = wordLc;
     }
 
-    public void defineInPlace(Word word) {
+    public void insert(Word word) {
         if (this.words == null) {
             throw new IllegalArgumentException(this + " cannot define in place: " + word);
         }
@@ -84,9 +84,9 @@ final class Dictionary {
     Stream<Word> words() {
         var local =
             word != null ? Stream.of(word)
-                : words != null ? words.values()
-                    .stream()
-                    : Stream.<Word>empty();
+                : words == null ? Stream.<Word>empty()
+                    : words.values()
+                        .stream();
         return parent == null
             ? local
             : Stream.concat(local, parent.words());

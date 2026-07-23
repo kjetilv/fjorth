@@ -26,3 +26,6 @@
 : 2R@ R> R> 2DUP >R >R SWAP ;
 : 2R> R> R> SWAP ;
 : 2>R SWAP >R >R ;
+: 2SWAP ROT >R ROT R> ;
+: 2DUP OVER OVER ;
+: 2OVER 2>R 2DUP 2R> 2SWAP ;

@@ -10,7 +10,7 @@ class MemoryTest {
 
     private final MachineImpl machine = new MachineImpl();
 
-    private final Interpreter interpreter = machine.interpreter(Console.to(new StringWriter()));
+    private final Interpreter interpreter = machine.interpreter(Consoles.to(new StringWriter()));
 
     private long[] stackAfter(String line) {
         interpreter.interpret(line);

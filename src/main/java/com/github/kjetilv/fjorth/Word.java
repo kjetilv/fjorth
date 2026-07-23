@@ -42,6 +42,10 @@ sealed interface Word {
         public Colon {
             body = List.copyOf(body);
         }
+
+        Word asImmediate() {
+            return immediate ? this : new Colon(name, true, body);
+        }
     }
 
     record Literal(long value) implements Word {
