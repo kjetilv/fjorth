@@ -324,19 +324,7 @@ final class Primitives {
             var machine = interpreter.machine();
             var b = machine.pop();
             var a = machine.pop();
-            var value = switch (op) {
-                case Add add -> add.applyAsLong(a, b);
-                case Sub sub -> sub.applyAsLong(a, b);
-                case Mul mul -> mul.applyAsLong(a, b);
-                case Div div -> div.applyAsLong(a, b);
-                case Mod mod -> mod.applyAsLong(a, b);
-                case Eql eql -> eql.applyAsLong(a, b);
-                case GTh gTh -> gTh.applyAsLong(a, b);
-                case LTh lTh -> lTh.applyAsLong(a, b);
-                case And and -> and.applyAsLong(a, b);
-                case Or or -> or.applyAsLong(a, b);
-                case Xor xor -> xor.applyAsLong(a, b);
-            };
+            var value = op.applyAsLong(a,b);
             machine.push(value);
         }
 
@@ -479,12 +467,7 @@ final class Primitives {
         public void apply(InterpreterImpl interpreter) {
             var machine = interpreter.machine();
             var a = machine.pop();
-            var value = switch (op) {
-                case Eq0 eq0 -> eq0.applyAsLong(a);
-                case Invert invert -> invert.applyAsLong(a);
-                case Identity identity -> identity.applyAsLong(a);
-                default -> op.applyAsLong(a);
-            };
+            var value = op.applyAsLong(a);
             machine.push(value);
         }
 
