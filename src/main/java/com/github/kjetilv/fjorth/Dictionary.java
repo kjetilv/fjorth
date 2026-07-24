@@ -4,16 +4,19 @@ import module java.base;
 
 final class Dictionary {
 
-    public static Dictionary empty() {
-        return new Dictionary(null, null, null);
-    }
-
     public static Dictionary of(Word word) {
-        return new Dictionary(null, word, null);
+        return new Dictionary(
+            null,
+            Objects.requireNonNull(word, "word"),
+            null
+        );
     }
 
     @SuppressWarnings("SameParameterValue")
     static Dictionary unsealed(List<Word> words) {
+        if (Objects.requireNonNull(words, "words").isEmpty()) {
+            throw new IllegalStateException("Empty list");
+        }
         return new Dictionary(null, null, words);
     }
 

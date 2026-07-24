@@ -265,9 +265,7 @@ final class InterpreterImpl implements Interpreter {
         while (pointer < body.size()) {
             pointer = switch (body.get(pointer)) {
                 case Word.Branch(var nextPointer) -> nextPointer;
-                case Word.ZeroBranch(var nextPointer) -> machine.pop() == 0
-                    ? nextPointer
-                    : pointer + 1;
+                case Word.ZeroBranch(var nextPointer) -> machine.pop() == 0 ? nextPointer : pointer + 1;
                 case Word word -> {
                     execute(word);
                     yield pointer + 1;

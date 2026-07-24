@@ -8,11 +8,6 @@ import static org.junit.jupiter.api.Assertions.*;
 class DictionaryTest {
 
     @Test
-    void emptyDictionaryFindsNothing() {
-        assertNull(Dictionary.empty().lookup("DUP"));
-    }
-
-    @Test
     void definedWordIsFound() {
         var dup = primitive("DUP");
         var dictionary = Dictionary.of(dup);
@@ -37,10 +32,10 @@ class DictionaryTest {
 
     @Test
     void defineDoesNotMutateOriginal() {
-        var base = Dictionary.empty();
-        var extended = base.define(primitive("DUP"));
-        assertNull(base.lookup("DUP"));
-        assertNotNull(extended.lookup("DUP"));
+        var base = Dictionary.of(primitive("DUP"));
+        var extended = base.define(primitive("DUPX"));
+        assertNull(base.lookup("DUPX"));
+        assertNotNull(extended.lookup("DUPX"));
     }
 
     @Test
