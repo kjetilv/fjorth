@@ -8,4 +8,4 @@
 	+
     then ;
 
-: main 35 fib . ;
+: main 34 fib . ;

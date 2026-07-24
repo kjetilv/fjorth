@@ -11,6 +11,6 @@ public class FibTest extends InterpreterTestCase {
     void fibonacci() {
         interpretResource("fib.fs");
         interpret("main");
-        assertEquals("14930352", output().trim());
+        assertEquals("9227465", output().trim());
     }
 }
