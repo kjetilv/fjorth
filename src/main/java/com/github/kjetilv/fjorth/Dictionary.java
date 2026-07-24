@@ -101,7 +101,7 @@ final class Dictionary {
                 : null;
     }
 
-    private static LinkedHashMap<String, Word> toMap(List<Word> words) {
+    private static Map<String, Word> toMap(List<Word> words) {
         return words.stream()
             .collect(Collectors.toMap(
                 w -> lc(w.name()),
