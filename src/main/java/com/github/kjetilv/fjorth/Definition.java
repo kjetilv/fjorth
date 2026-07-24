@@ -129,7 +129,7 @@ final class Definition {
             var latest = interpreter.dictionary().latest();
             if (latest == null) {
                 throw new FjorthException("DOES>: empty dictionary");
-            };
+            }
             interpreter.define(Word.primitive(latest.name(), new InnerDoes(latest, tailColon)));
         }
 

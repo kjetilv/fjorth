@@ -5,15 +5,6 @@ import com.github.kjetilv.fjorth.Interpreter.Result.Failed;
 import com.github.kjetilv.fjorth.Interpreter.Result.OK;
 import com.github.kjetilv.fjorth.Machine;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.Optional;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
-
 ///  Salty Fjorð!
 void main(String[] args) {
     if (args.length == 0) {
