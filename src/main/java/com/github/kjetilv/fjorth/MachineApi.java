@@ -1,14 +1,6 @@
 package com.github.kjetilv.fjorth;
 
-public interface MachineApi extends Machine{
-
-    long[] stack();
-
-    int baseAddress();
-
-    int base();
-
-    void push(long value);
+interface MachineApi extends Machine {
 
     default int ipop() {
         var pop = pop();
@@ -19,11 +11,23 @@ public interface MachineApi extends Machine{
         }
     }
 
-    long pop();
-
     default long peek() {
         return peek(0);
     }
+
+    default long peekReturn() {
+        return peekReturn(0);
+    }
+
+    long[] stack();
+
+    int baseAddress();
+
+    int base();
+
+    void push(long value);
+
+    long pop();
 
     long peek(int offset);
 
@@ -32,10 +36,6 @@ public interface MachineApi extends Machine{
     void pushReturn(long value);
 
     long popReturn();
-
-    default long peekReturn() {
-        return peekReturn(0);
-    }
 
     long peekReturn(int offset);
 

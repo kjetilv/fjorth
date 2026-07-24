@@ -3,7 +3,7 @@ package com.github.kjetilv.fjorth;
 import module java.base;
 
 @SuppressWarnings({"UnusedReturnValue", "unused"})
-public final class HeapMachine implements MachineApi {
+final class HeapMachine implements MachineApi {
 
     public static final int CHAR_MASK = 0xFFFF;
 
@@ -53,6 +53,20 @@ public final class HeapMachine implements MachineApi {
     }
 
     @Override
+    public long peek() {
+        return dataTop > 0
+            ? data[dataTop - 1]
+            : fail("stack underflow");
+    }
+
+    @Override
+    public long peekReturn() {
+        return returnsTop > 0
+            ? returns[returnsTop - 1]
+            : fail("return stack underflow");
+    }
+
+    @Override
     public long[] stack() {
         return Arrays.copyOf(data, dataTop);
     }
@@ -92,13 +106,6 @@ public final class HeapMachine implements MachineApi {
     }
 
     @Override
-    public long peek() {
-        return dataTop > 0
-            ? data[dataTop - 1]
-            : fail("stack underflow");
-    }
-
-    @Override
     public int depth() {
         return dataTop;
     }
@@ -115,13 +122,6 @@ public final class HeapMachine implements MachineApi {
         checkReturnUnderflow();
         returnsTop--;
         return returns[returnsTop];
-    }
-
-    @Override
-    public long peekReturn() {
-        return returnsTop > 0
-            ? returns[returnsTop - 1]
-            : fail("return stack underflow");
     }
 
     @Override
