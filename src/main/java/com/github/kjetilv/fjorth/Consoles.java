@@ -12,12 +12,12 @@ public final class Consoles {
         return new PrintWriterConsole(output);
     }
 
-    public static Console to(StringBuilder builder) {
-        return new StringBuilderConsole(builder);
-    }
-
     public static Console to(StringWriter output) {
         return new PrintWriterConsole(output);
+    }
+
+    public static Console to(StringBuilder builder) {
+        return new StringBuilderConsole(builder);
     }
 
     private Consoles() {
