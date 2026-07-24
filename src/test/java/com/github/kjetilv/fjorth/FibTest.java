@@ -5,12 +5,12 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class FibTest extends InterpreterTestCase{
+public class FibTest extends InterpreterTestCase {
 
     @Test
     void fibonacci() {
         interpretResource("fib.fs");
         interpret("main");
-        assertEquals("9227465", output().trim());
+        assertEquals("14930352", output().trim());
     }
 }

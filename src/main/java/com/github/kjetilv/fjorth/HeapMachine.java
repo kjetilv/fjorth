@@ -53,16 +53,6 @@ public final class HeapMachine implements MachineApi {
     }
 
     @Override
-    public char charAt(long address) {
-        return asChar(memory[checkAddress(address)]);
-    }
-
-    @Override
-    public char cpop() {
-        return asChar(pop());
-    }
-
-    @Override
     public long[] stack() {
         return Arrays.copyOf(data, dataTop);
     }
@@ -88,16 +78,6 @@ public final class HeapMachine implements MachineApi {
     }
 
     @Override
-    public int ipop() {
-        var pop = pop();
-        try {
-            return Math.toIntExact(pop);
-        } catch (Exception e) {
-            throw new IllegalStateException("Expected int-sized value on stack: " + pop);
-        }
-    }
-
-    @Override
     public long pop() {
         checkUnderflow();
         dataTop--;
@@ -105,16 +85,16 @@ public final class HeapMachine implements MachineApi {
     }
 
     @Override
-    public long peek() {
-        return dataTop == 0
-            ? fail("stack underflow")
-            : data[dataTop - 1];
-    }
-
-    @Override
     public long peek(int offset) {
         return dataTop > offset
             ? data[dataTop - 1 - offset]
+            : fail("stack underflow");
+    }
+
+    @Override
+    public long peek() {
+        return dataTop > 0
+            ? data[dataTop - 1]
             : fail("stack underflow");
     }
 
@@ -139,9 +119,9 @@ public final class HeapMachine implements MachineApi {
 
     @Override
     public long peekReturn() {
-        return returnsTop == 0
-            ? fail("return stack underflow")
-            : returns[returnsTop - 1];
+        return returnsTop > 0
+            ? returns[returnsTop - 1]
+            : fail("return stack underflow");
     }
 
     @Override

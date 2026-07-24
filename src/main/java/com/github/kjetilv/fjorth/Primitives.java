@@ -6,28 +6,9 @@ import static com.github.kjetilv.fjorth.Word.*;
 
 final class Primitives {
 
-    @SuppressWarnings("Convert2MethodRef")
     public static final List<Word> WORDS = List.of(
-        immediate(
-            "ABORT", interpreter ->
-                interpreter.reset()
-        ),
-        immediate(
-            "ABORT\"", interpreter -> {
-                var text = interpreter.readUntil('"');
-                var machine = interpreter.machine();
-                if (machine.compiling()) {
-                    interpreter.append(Word.primitive(
-                        "(.\")",
-                        _ -> interpreter.print(text)
-                    ));
-                    machine.compiling(false);
-                } else {
-                    interpreter.print(text);
-                }
-                interpreter.reset();
-            }
-        ),
+        immediate("ABORT", new Abort()),
+        immediate("ABORT\"", new AbortQuote()),
         primitive("DUP", new Dup()),
         primitive("DROP", new Drop()),
         primitive("SWAP", new Swap()),
@@ -54,7 +35,7 @@ final class Primitives {
         primitive(".S", new DotS()),
         primitive("BASE", new Base()),
         primitive("EMIT", new Emit()),
-        primitive("CR", interpreter -> interpreter.print('\n')),
+        primitive("CR", new Print("\n")),
         immediate(".\"", new DotQuote()),
         immediate("S\"", new SQuote()),
         primitive("TYPE", new Type()),
@@ -63,8 +44,8 @@ final class Primitives {
         immediate("\\", new ReadRestOfLine()),
         primitive(":", new BeginDefinition()),
         immediate(";", new EndDefinition()),
-        primitive("IMMEDIATE", InterpreterImpl::makeLatestImmediate),
-        immediate("DOES>", interpreter -> interpreter.open().beginTail()),
+        primitive("IMMEDIATE", new MakeLatestImmediate()),
+        immediate("DOES>", new ImmediateDoes()),
         primitive("CONSTANT", new Constant()),
         primitive("VARIABLE", new Variable()),
         primitive("@", new Fetch()),
@@ -76,115 +57,26 @@ final class Primitives {
         primitive("+!", new AddStore()),
         primitive(",", new Comma()),
         primitive("CREATE", new Create()),
-        immediate(
-            "IF", interpreter -> {
-                var at = interpreter.open().size();
-                interpreter.append(zeroBranch(-1));
-                interpreter.machine().push(at);
-            }
-        ),
-        immediate(
-            "ELSE", interpreter -> {
-                var machine = interpreter.machine();
-                var ifAt = machine.ipop();
-                var elseAt = interpreter.open().size();
-                interpreter.append(branch(-1));
-                interpreter.open().resolve(ifAt, interpreter.open().size());
-                machine.push(elseAt);
-            }
-        ),
-        immediate(
-            "THEN", interpreter -> {
-                var at = interpreter.machine().ipop();
-                interpreter.open().resolve(at, interpreter.open().size());
-            }
-        ),
-        immediate(
-            "BEGIN", interpreter ->
-                interpreter.machine().push(interpreter.open().size())
-        ),
-        immediate(
-            "UNTIL", interpreter ->
-                interpreter.append(zeroBranch(interpreter.machine().ipop()))
-        ),
-        immediate(
-            "WHILE", interpreter -> {
-                var at = interpreter.open().size();
-                interpreter.append(zeroBranch(-1));
-                interpreter.machine().push(at);
-            }
-        ),
-        immediate(
-            "REPEAT", interpreter -> {
-                var machine = interpreter.machine();
-                var whileAt = machine.ipop();
-                var dest = machine.ipop();
-                interpreter.append(branch(dest));
-                interpreter.open().resolve(whileAt, interpreter.open().size());
-            }
-        ),
+        immediate("IF", new If()),
+        immediate("ELSE", new Else()),
+        immediate("THEN", new Then()),
+        immediate("BEGIN", new Begin()),
+        immediate("UNTIL", new Until()),
+        immediate("WHILE", new While()),
+        immediate("REPEAT", new Repeat()),
         immediate("DO", new Do()),
         immediate("?DO", new QDo()),
         immediate("LOOP", new Loop()),
         immediate("+LOOP", new PlusLoop()),
-        immediate(
-            "LEAVE", interpreter -> {
-                var machine = interpreter.machine();
-                interpreter.append(primitive(
-                    "(unloop)", _ -> {
-                        machine.popReturn();
-                        machine.popReturn();
-                    }
-                ));
-                var at = interpreter.open().size();
-                interpreter.append(branch(-1));
-                interpreter.open().addLeave(at);
-            }
-        ),
-        immediate(
-            "EXIT", interpreter ->
-                interpreter.append(branch(Integer.MAX_VALUE))
-        ),
-        immediate(
-            "RECURSE", interpreter ->
-                interpreter.append(interpreter.open().recurse())
-        ),
-        primitive(
-            "I", new I()
-        ),
-        primitive(
-            "J", interpreter -> {
-                var machine = interpreter.machine();
-                machine.push(index(machine.peekReturn(2), machine.peekReturn(3)));
-            }
-        ),
-        primitive(
-            "WORDS", interpreter -> {
-                interpreter.print(interpreter.dictionary().words()
-                    .map(Word::name)
-                    .distinct()
-                    .collect(Collectors.joining(" ")));
-                interpreter.print('\n');
-            }
-        ),
+        immediate("LEAVE", new Leave()),
+        immediate("EXIT", new Exit()),
+        immediate("RECURSE", new ImmediateRecurse()),
+        primitive("I", new I()),
+        primitive("J", new J()),
+        primitive("WORDS", new Words()),
         primitive("SEE", new See()),
-        primitive(
-            "FILL", interpreter -> {
-                var machine = interpreter.machine();
-                var c = machine.pop();
-                var count = machine.pop();
-                var address = machine.pop();
-                machine.store(address, count, c);
-            }
-        ),
-        primitive(
-            "ERASE", interpreter -> {
-                var machine = interpreter.machine();
-                var count = machine.pop();
-                var address = machine.pop();
-                machine.store(address, count, (char) 0);
-            }
-        ),
+        primitive("FILL", new Fill()),
+        primitive("ERASE", new Erase()),
         primitive("C@", new FetchChar()),
         primitive("C!", new StoreChar()),
         noop("ALIGN"),
@@ -306,14 +198,14 @@ final class Primitives {
         return text.toString();
     }
 
-    static final class Noop implements Effect {
+    record Noop() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
         }
     }
 
-    static final class EndDefinition implements Effect {
+    record EndDefinition() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -321,7 +213,7 @@ final class Primitives {
         }
     }
 
-    static final class BeginDefinition implements Effect {
+    record BeginDefinition() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -329,7 +221,7 @@ final class Primitives {
         }
     }
 
-    static final class Base implements Effect {
+    record Base() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -338,7 +230,7 @@ final class Primitives {
         }
     }
 
-    static final class Dot implements Effect {
+    record Dot() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -347,7 +239,7 @@ final class Primitives {
         }
     }
 
-    static final class Dup implements Effect {
+    record Dup() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -356,7 +248,7 @@ final class Primitives {
         }
     }
 
-    static final class Drop implements Effect {
+    record Drop() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -364,7 +256,7 @@ final class Primitives {
         }
     }
 
-    static final class Swap implements Effect {
+    record Swap() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -376,7 +268,7 @@ final class Primitives {
         }
     }
 
-    static final class Over implements Effect {
+    record Over() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -389,7 +281,7 @@ final class Primitives {
         }
     }
 
-    static final class SQuote implements Effect {
+    record SQuote() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -410,7 +302,7 @@ final class Primitives {
 
     }
 
-    static final class Rot implements Effect {
+    record Rot() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -425,13 +317,7 @@ final class Primitives {
 
     }
 
-    static final class BinaryOp implements Effect {
-
-        private final LongBinaryOperator op;
-
-        private BinaryOp(LongBinaryOperator op) {
-            this.op = op;
-        }
+    record BinaryOp(LongBinaryOperator op) implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -455,7 +341,7 @@ final class Primitives {
             machine.push(value);
         }
 
-        private static final class Add implements LongBinaryOperator {
+        private record Add() implements LongBinaryOperator {
 
             @Override
             public long applyAsLong(long a, long b) {
@@ -550,7 +436,7 @@ final class Primitives {
         }
     }
 
-    static final class PushReturn implements Effect {
+    record PushReturn() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -559,7 +445,7 @@ final class Primitives {
         }
     }
 
-    static final class PopReturn implements Effect {
+    record PopReturn() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -568,7 +454,7 @@ final class Primitives {
         }
     }
 
-    static final class PeekReturn implements Effect {
+    record PeekReturn() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -577,7 +463,7 @@ final class Primitives {
         }
     }
 
-    static final class Emit implements Effect {
+    record Emit() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -585,13 +471,7 @@ final class Primitives {
         }
     }
 
-    static final class UnaryOp implements Effect {
-
-        private final LongUnaryOperator op;
-
-        private UnaryOp(LongUnaryOperator op) {
-            this.op = op;
-        }
+    record UnaryOp(LongUnaryOperator op) implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -631,7 +511,7 @@ final class Primitives {
         }
     }
 
-    static final class ReadRestOfLine implements Effect {
+    record ReadRestOfLine() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -639,7 +519,7 @@ final class Primitives {
         }
     }
 
-    static final class ReadToRightPar implements Effect {
+    record ReadToRightPar() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -647,43 +527,43 @@ final class Primitives {
         }
     }
 
-    static final class Constant implements Effect {
+    record Constant() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
             var name = interpreter.word("CONSTANT");
-            var value = interpreter.machine().pop();
-            interpreter.define(Word.primitive(name, _ -> interpreter.machine().push(value)));
+            var machine = interpreter.machine();
+            var value = machine.pop();
+            interpreter.define(Word.primitive(name, new MachinePush(machine, value)));
         }
+
     }
 
-    static final class Variable implements Effect {
+    record Variable() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
             var name = interpreter.word("VARIABLE");
-            long address = interpreter.machine().allot(1);
-            interpreter.define(Word.primitive(name, _ -> interpreter.machine().push(address)));
+            var machine = interpreter.machine();
+            long address = machine.allot(1);
+            interpreter.define(Word.primitive(name, new MachinePush(machine, address)));
         }
     }
 
-    static final class DotQuote implements Effect {
+    record DotQuote() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
             var text = interpreter.readUntil('"');
             if (interpreter.machine().compiling()) {
-                interpreter.append(Word.primitive(
-                    "(.\")",
-                    _ -> interpreter.print(text)
-                ));
+                interpreter.append(Word.primitive("(.\")", new Print(text)));
             } else {
                 interpreter.print(text);
             }
         }
     }
 
-    static final class Fetch implements Effect {
+    record Fetch() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -694,7 +574,7 @@ final class Primitives {
         }
     }
 
-    static final class Store implements Effect {
+    record Store() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -704,7 +584,7 @@ final class Primitives {
         }
     }
 
-    static final class Here implements Effect {
+    record Here() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -713,7 +593,7 @@ final class Primitives {
         }
     }
 
-    static final class Allot implements Effect {
+    record Allot() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -722,7 +602,7 @@ final class Primitives {
         }
     }
 
-    static final class AddStore implements Effect {
+    record AddStore() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -732,7 +612,7 @@ final class Primitives {
         }
     }
 
-    static final class Comma implements Effect {
+    record Comma() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -741,7 +621,7 @@ final class Primitives {
         }
     }
 
-    static final class DotR implements Effect {
+    record DotR() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -752,7 +632,7 @@ final class Primitives {
         }
     }
 
-    static final class DotS implements Effect {
+    record DotS() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -766,7 +646,7 @@ final class Primitives {
         }
     }
 
-    static final class Type implements Effect {
+    record Type() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -774,7 +654,7 @@ final class Primitives {
         }
     }
 
-    static final class Evaluate implements Effect {
+    record Evaluate() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -782,61 +662,71 @@ final class Primitives {
         }
     }
 
-    static final class Create implements Effect {
+    record Create() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
             var name = interpreter.word("CREATE");
+            var machine = interpreter.machine();
             long address = interpreter.machine().here();
-            interpreter.define(Word.primitive(
-                name,
-                false,
-                _ ->
-                    interpreter.machine().push(address)
-            ));
+            interpreter.define(Word.primitive(name, false, new MachinePush(machine, address)));
         }
     }
 
-    static final class Loop implements Effect {
-
-        @Override
-        public void apply(InterpreterImpl interpreter) {
-            closeLoop(
-                interpreter,
-                primitive(
-                    "(loop)", _ ->
-                        loopStep(interpreter.machine(), 1)
-                )
-            );
-        }
-    }
-
-    static final class PlusLoop implements Effect {
-
-        @Override
-        public void apply(InterpreterImpl interpreter) {
-            closeLoop(
-                interpreter,
-                primitive(
-                    "(+loop)", _ -> {
-                        var machine1 = interpreter.machine();
-                        loopStep(machine1, machine1.pop());
-                    }
-                )
-            );
-        }
-    }
-
-    static final class I implements Effect {
+    record Loop() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
             var machine = interpreter.machine();
-            machine.push(index(machine.peekReturn(0), machine.peekReturn(1)));
+            closeLoop(
+                interpreter,
+                primitive(
+                    "(loop)", new InnerLoop(machine)
+                )
+            );
+        }
+
+        record InnerLoop(MachineApi machine) implements Effect {
+
+            @Override
+            public void apply(InterpreterImpl interpreter) {
+                loopStep(machine, 1);
+            }
         }
     }
 
-    static final class StoreChar implements Effect {
+    record PlusLoop() implements Effect {
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            var machine = interpreter.machine();
+            closeLoop(
+                interpreter,
+                primitive(
+                    "(+loop)", new InnerPlusLoop(machine)
+                )
+            );
+        }
+
+        record InnerPlusLoop(MachineApi machine) implements Effect {
+
+            @Override
+            public void apply(InterpreterImpl i) {
+                loopStep(machine, machine.pop());
+            }
+        }
+    }
+
+    record I() implements Effect {
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            var machine = interpreter.machine();
+            machine.push(index(machine.peekReturn(), machine.peekReturn(1)));
+        }
+    }
+
+    record StoreChar() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -847,7 +737,7 @@ final class Primitives {
         }
     }
 
-    static final class FetchChar implements Effect {
+    record FetchChar() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -858,42 +748,24 @@ final class Primitives {
         }
     }
 
-    static final class Do implements Effect {
+    record Do() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
             var machine = interpreter.machine();
-            interpreter.append(primitive(
-                "(do)", _ -> {
-                    var index = machine.pop();
-                    var limit = machine.pop();
-                    machine.pushReturn(limit);
-                    machine.pushReturn(slot(index, limit));
-                }
-            ));
+            interpreter.append(primitive("(do)", new InnerDo(machine)));
             interpreter.open().beginLoop();
             interpreter.machine().push(interpreter.open().size());
         }
+
     }
 
-    static final class QDo implements Effect {
+    record QDo() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
             var machine = interpreter.machine();
-            interpreter.append(primitive(
-                "(?do)", _ -> {
-                    var index = machine.pop();
-                    var limit = machine.pop();
-                    if (limit == index) {
-                        machine.push(0);
-                    } else {
-                        machine.pushReturn(limit);
-                        machine.pushReturn(slot(index, limit));
-                        machine.push(-1);
-                    }
-                }
-            ));
+            interpreter.append(primitive("(?do)", new InnerDo(machine)));
             var open = interpreter.open();
             open.beginLoop();
             var skip = open.size();
@@ -901,9 +773,25 @@ final class Primitives {
             open.addLeave(skip);
             interpreter.machine().push(open.size());
         }
+
+        record InnerDo(MachineApi machine) implements Effect {
+
+            @Override
+            public void apply(InterpreterImpl i) {
+                var index = machine.pop();
+                var limit = machine.pop();
+                if (limit == index) {
+                    machine.push(0);
+                } else {
+                    machine.pushReturn(limit);
+                    machine.pushReturn(slot(index, limit));
+                    machine.push(-1);
+                }
+            }
+        }
     }
 
-    static final class See implements Effect {
+    record See() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -911,6 +799,228 @@ final class Primitives {
             var word = interpreter.dictionary().lookup(name)
                 .orElseThrow(() -> new FjorthException(name + " ?"));
             interpreter.print(render(word));
+        }
+    }
+
+    record ImmediateDoes() implements Effect {
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            interpreter.open().beginTail();
+        }
+    }
+
+    record If() implements Effect {
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            var at = interpreter.open().size();
+            interpreter.append(zeroBranch(-1));
+            interpreter.machine().push(at);
+        }
+    }
+
+    record Else() implements Effect {
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            var machine = interpreter.machine();
+            var ifAt = machine.ipop();
+            var elseAt = interpreter.open().size();
+            interpreter.append(branch(-1));
+            interpreter.open().resolve(ifAt, interpreter.open().size());
+            machine.push(elseAt);
+        }
+    }
+
+    record Then() implements Effect {
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            var at = interpreter.machine().ipop();
+            interpreter.open().resolve(at, interpreter.open().size());
+        }
+    }
+
+    record Begin() implements Effect {
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            interpreter.machine().push(interpreter.open().size());
+        }
+    }
+
+    record Until() implements Effect {
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            interpreter.append(zeroBranch(interpreter.machine().ipop()));
+        }
+    }
+
+    record While() implements Effect {
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            var at = interpreter.open().size();
+            interpreter.append(zeroBranch(-1));
+            interpreter.machine().push(at);
+        }
+    }
+
+    record Repeat() implements Effect {
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            var machine = interpreter.machine();
+            var whileAt = machine.ipop();
+            var dest = machine.ipop();
+            interpreter.append(branch(dest));
+            interpreter.open().resolve(whileAt, interpreter.open().size());
+        }
+    }
+
+    record Leave() implements Effect {
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            var machine = interpreter.machine();
+            interpreter.append(primitive("(unloop)", new PopReturn2(machine)));
+            var at = interpreter.open().size();
+            interpreter.append(branch(-1));
+            interpreter.open().addLeave(at);
+        }
+
+        record PopReturn2(MachineApi machine) implements Effect {
+
+            @Override
+            public void apply(InterpreterImpl i) {
+                machine.popReturn();
+                machine.popReturn();
+            }
+        }
+    }
+
+    record ImmediateRecurse() implements Effect {
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            interpreter.append(interpreter.open().recurse());
+        }
+    }
+
+    record Exit() implements Effect {
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            interpreter.append(branch(Integer.MAX_VALUE));
+        }
+    }
+
+    record J() implements Effect {
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            var machine = interpreter.machine();
+            machine.push(index(machine.peekReturn(2), machine.peekReturn(3)));
+        }
+    }
+
+    record Erase() implements Effect {
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            var machine = interpreter.machine();
+            var count = machine.pop();
+            var address = machine.pop();
+            machine.store(address, count, (char) 0);
+        }
+    }
+
+    record Fill() implements Effect {
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            var machine = interpreter.machine();
+            var c = machine.pop();
+            var count = machine.pop();
+            var address = machine.pop();
+            machine.store(address, count, c);
+        }
+    }
+
+    record Words() implements Effect {
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            interpreter.print(interpreter.dictionary().words()
+                .map(Word::name)
+                .distinct()
+                .collect(Collectors.joining(" ")));
+            interpreter.print('\n');
+        }
+    }
+
+    record AbortQuote() implements Effect {
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            var text = interpreter.readUntil('"');
+            var machine = interpreter.machine();
+            if (machine.compiling()) {
+                interpreter.append(Word.primitive(
+                    "(.\")",
+                    new Print(text)
+                ));
+                machine.compiling(false);
+            } else {
+                interpreter.print(text);
+            }
+            interpreter.reset();
+        }
+
+    }
+
+    record Abort() implements Effect {
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            interpreter.reset();
+        }
+    }
+
+    record MachinePush(MachineApi machine, long value) implements Effect {
+
+        @Override
+        public void apply(InterpreterImpl i) {
+            machine.push(value);
+        }
+    }
+
+    record InnerDo(MachineApi machine) implements Effect {
+
+        @Override
+        public void apply(InterpreterImpl i) {
+            var index = machine.pop();
+            var limit = machine.pop();
+            machine.pushReturn(limit);
+            machine.pushReturn(slot(index, limit));
+        }
+    }
+
+    record Print(String text) implements Effect {
+
+        @Override
+        public void apply(InterpreterImpl i) {
+            i.print(text);
+        }
+    }
+
+    record MakeLatestImmediate() implements Effect {
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            interpreter.makeLatestImmediate();
         }
     }
 }

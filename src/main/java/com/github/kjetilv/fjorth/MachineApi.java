@@ -2,10 +2,6 @@ package com.github.kjetilv.fjorth;
 
 public interface MachineApi extends Machine{
 
-    char charAt(long address);
-
-    char cpop();
-
     long[] stack();
 
     int baseAddress();
@@ -14,11 +10,20 @@ public interface MachineApi extends Machine{
 
     void push(long value);
 
-    int ipop();
+    default int ipop() {
+        var pop = pop();
+        try {
+            return Math.toIntExact(pop);
+        } catch (Exception e) {
+            throw new IllegalStateException("Expected int-sized value on stack: " + pop);
+        }
+    }
 
     long pop();
 
-    long peek();
+    default long peek() {
+        return peek(0);
+    }
 
     long peek(int offset);
 
@@ -28,7 +33,9 @@ public interface MachineApi extends Machine{
 
     long popReturn();
 
-    long peekReturn();
+    default long peekReturn() {
+        return peekReturn(0);
+    }
 
     long peekReturn(int offset);
 

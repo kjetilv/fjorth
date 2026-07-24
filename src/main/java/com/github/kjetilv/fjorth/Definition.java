@@ -68,7 +68,7 @@ final class Definition {
     }
 
     Word recurse() {
-        return Word.primitive("(recurse)", interpreter -> interpreter.execute(self[0]));
+        return Word.primitive("(recurse)", new Recurse(self));
     }
 
     Word.Colon seal() {
@@ -103,18 +103,7 @@ final class Definition {
     }
 
     private static Word retrofit(Word.Colon tailColon) {
-        return Word.primitive(
-            "(does>)", interpreter -> {
-                var latest = interpreter.dictionary().latest()
-                    .orElseThrow(() -> new FjorthException("DOES>: empty dictionary"));
-                interpreter.define(Word.primitive(
-                    latest.name(), _ -> {
-                        interpreter.execute(latest);
-                        interpreter.execute(tailColon);
-                    }
-                ));
-            }
-        );
+        return Word.primitive("(does>)", new PrimitiveDoes(tailColon));
     }
 
     private static boolean unresolved(Word word) {
@@ -123,5 +112,32 @@ final class Definition {
             case Word.ZeroBranch(var target) -> target < 0;
             default -> false;
         };
+    }
+
+    record Recurse(Word[] self) implements Word.Effect {
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            interpreter.execute(self[0]);
+        }
+    }
+
+    record PrimitiveDoes(Word.Colon tailColon) implements Word.Effect {
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            var latest = interpreter.dictionary().latest()
+                .orElseThrow(() -> new FjorthException("DOES>: empty dictionary"));
+            interpreter.define(Word.primitive(latest.name(), new InnerDoes(latest, tailColon)));
+        }
+
+        record InnerDoes(Word latest, Word tailColon) implements Word.Effect {
+
+            @Override
+            public void apply(InterpreterImpl interpreter) {
+                interpreter.execute(latest);
+                interpreter.execute(tailColon);
+            }
+        }
     }
 }

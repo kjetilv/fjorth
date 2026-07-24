@@ -2,6 +2,8 @@ package com.github.kjetilv.fjorth;
 
 import module java.base;
 
+import static com.github.kjetilv.fjorth.Primitives.*;
+
 sealed interface Word {
 
     static Primitive primitive(String name, Effect effect) {
@@ -75,8 +77,75 @@ sealed interface Word {
 
     }
 
-    @FunctionalInterface
-    interface Effect {
+    sealed interface Effect permits Definition.PrimitiveDoes,
+        Definition.PrimitiveDoes.InnerDoes,
+        Definition.Recurse,
+        Abort,
+        AbortQuote,
+        AddStore,
+        Allot,
+        Base,
+        Begin,
+        BeginDefinition,
+        BinaryOp,
+        Comma,
+        Constant,
+        Create,
+        Do,
+        Dot,
+        DotQuote,
+        DotR,
+        DotS,
+        Drop,
+        Dup,
+        Else,
+        Emit,
+        EndDefinition,
+        Erase,
+        Evaluate,
+        Exit,
+        Fetch,
+        FetchChar,
+        Fill,
+        Here,
+        I,
+        If,
+        ImmediateDoes,
+        ImmediateRecurse,
+        InnerDo,
+        J,
+        Leave,
+        Leave.PopReturn2,
+        Loop,
+        Loop.InnerLoop,
+        MachinePush,
+        Primitives.MakeLatestImmediate,
+        Noop,
+        Over,
+        PeekReturn,
+        PlusLoop,
+        PlusLoop.InnerPlusLoop,
+        PopReturn,
+        Print,
+        PushReturn,
+        QDo,
+        QDo.InnerDo,
+        ReadRestOfLine,
+        ReadToRightPar,
+        Repeat,
+        Rot,
+        SQuote,
+        See,
+        Store,
+        StoreChar,
+        Swap,
+        Then,
+        Type,
+        UnaryOp,
+        Until,
+        Variable,
+        While,
+        Words {
 
         @SuppressWarnings("ClassEscapesDefinedScope")
         void apply(InterpreterImpl interpreter);

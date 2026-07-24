@@ -18,7 +18,7 @@ class LibTest extends InterpreterTestCase {
         interpret("2>R");
         assertEquals(2, machine().returnDepth());
         assertEquals(10, machine().peekReturn(1));
-        assertEquals(20, machine().peekReturn(0));
+        assertEquals(20, machine().peekReturn());
 
         interpret("2R>");
         assertEquals(0, machine().returnDepth());

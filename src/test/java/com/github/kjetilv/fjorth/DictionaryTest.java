@@ -57,11 +57,6 @@ class DictionaryTest {
     }
 
     private static Word primitive(String name) {
-        return new Word.Primitive(
-            name,
-            false,
-            _ -> {
-            }
-        );
+        return new Word.Primitive(name, false, new Primitives.Noop());
     }
 }
