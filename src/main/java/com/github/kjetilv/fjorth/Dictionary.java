@@ -25,11 +25,7 @@ final class Dictionary {
 
     private final String wordLc;
 
-    private Dictionary(
-        Dictionary parent,
-        Word word,
-        List<Word> words
-    ) {
+    private Dictionary(Dictionary parent, Word word, List<Word> words) {
         var map = words == null
             ? null
             : toMap(words);
@@ -77,8 +73,8 @@ final class Dictionary {
         );
     }
 
-    Optional<Word> latest() {
-        return Optional.ofNullable(word);
+    Word latest() {
+        return word;
     }
 
     Stream<Word> words() {
@@ -92,17 +88,17 @@ final class Dictionary {
             : Stream.concat(local, parent.words());
     }
 
-    Optional<Word> lookup(String name) {
+    Word lookup(String name) {
         return lookupLc(lc(name));
     }
 
-    private Optional<Word> lookupLc(String nameLc) {
-        var found = wordLc != null && wordLc.equals(nameLc) ? word
+    private Word lookupLc(String nameLc) {
+        var word = wordLc != null && wordLc.equals(nameLc) ? this.word
             : words == null ? null
                 : words.get(nameLc);
-        return found != null ? Optional.of(found)
+        return word != null ? word
             : parent != null ? parent.lookupLc(nameLc)
-                : Optional.empty();
+                : null;
     }
 
     private static LinkedHashMap<String, Word> toMap(List<Word> words) {

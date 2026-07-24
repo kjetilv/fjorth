@@ -116,8 +116,10 @@ final class InterpreterImpl implements Interpreter {
     }
 
     void makeLatestImmediate() {
-        var latest = dictionary.latest()
-            .orElseThrow(() -> new FjorthException("IMMEDIATE: empty dictionary"));
+        var latest = dictionary.latest();
+        if (latest == null) {
+            throw new FjorthException("IMMEDIATE: empty dictionary");
+        }
         if (!(latest instanceof Word.Colon colon)) {
             throw new FjorthException("IMMEDIATE: not a colon definition: " + latest.name());
         }
@@ -241,12 +243,11 @@ final class InterpreterImpl implements Interpreter {
 
     private void handle(String token) {
         var word = dictionary.lookup(token);
-        if (word.isPresent()) {
-            var found = word.get();
-            if (machine.compiling() && !found.immediate()) {
-                append(found);
+        if (word != null) {
+            if (machine.compiling() && !word.immediate()) {
+                append(word);
             } else {
-                execute(found);
+                execute(word);
             }
         } else {
             var value = number(token);

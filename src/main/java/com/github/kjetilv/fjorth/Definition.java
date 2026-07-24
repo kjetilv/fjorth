@@ -114,7 +114,7 @@ final class Definition {
         };
     }
 
-    record Recurse(Word[] self) implements Word.Effect {
+    private record Recurse(Word[] self) implements Word.Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -122,16 +122,18 @@ final class Definition {
         }
     }
 
-    record PrimitiveDoes(Word.Colon tailColon) implements Word.Effect {
+    private record PrimitiveDoes(Word.Colon tailColon) implements Word.Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
-            var latest = interpreter.dictionary().latest()
-                .orElseThrow(() -> new FjorthException("DOES>: empty dictionary"));
+            var latest = interpreter.dictionary().latest();
+            if (latest == null) {
+                throw new FjorthException("DOES>: empty dictionary");
+            };
             interpreter.define(Word.primitive(latest.name(), new InnerDoes(latest, tailColon)));
         }
 
-        record InnerDoes(Word latest, Word tailColon) implements Word.Effect {
+        private record InnerDoes(Word latest, Word tailColon) implements Word.Effect {
 
             @Override
             public void apply(InterpreterImpl interpreter) {

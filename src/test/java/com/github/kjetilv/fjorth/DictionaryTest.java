@@ -9,22 +9,22 @@ class DictionaryTest {
 
     @Test
     void emptyDictionaryFindsNothing() {
-        assertTrue(Dictionary.empty().lookup("DUP").isEmpty());
+        assertNull(Dictionary.empty().lookup("DUP"));
     }
 
     @Test
     void definedWordIsFound() {
         var dup = primitive("DUP");
         var dictionary = Dictionary.of(dup);
-        assertSame(dup, dictionary.lookup("DUP").orElseThrow());
+        assertSame(dup, dictionary.lookup("DUP"));
     }
 
     @Test
     void lookupIsCaseInsensitive() {
         var dup = primitive("DUP");
         var dictionary = Dictionary.of(dup);
-        assertSame(dup, dictionary.lookup("dup").orElseThrow());
-        assertSame(dup, dictionary.lookup("Dup").orElseThrow());
+        assertSame(dup, dictionary.lookup("dup"));
+        assertSame(dup, dictionary.lookup("Dup"));
     }
 
     @Test
@@ -32,15 +32,15 @@ class DictionaryTest {
         var first = primitive("X");
         var second = primitive("X");
         var dictionary = Dictionary.of(first).define(second);
-        assertSame(second, dictionary.lookup("X").orElseThrow());
+        assertSame(second, dictionary.lookup("X"));
     }
 
     @Test
     void defineDoesNotMutateOriginal() {
         var base = Dictionary.empty();
         var extended = base.define(primitive("DUP"));
-        assertTrue(base.lookup("DUP").isEmpty());
-        assertTrue(extended.lookup("DUP").isPresent());
+        assertNull(base.lookup("DUP"));
+        assertNotNull(extended.lookup("DUP"));
     }
 
     @Test
@@ -51,7 +51,7 @@ class DictionaryTest {
             .define(caller)
             .define(primitive("X"));
         var found = dictionary.lookup("CALLER");
-        var colon = (Word.Colon) found.orElseThrow();
+        var colon = (Word.Colon) found;
         assertSame(first, colon.body().getFirst());
         assertEquals(1, colon.body().size());
     }

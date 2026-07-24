@@ -324,7 +324,7 @@ final class Primitives {
             var machine = interpreter.machine();
             var b = machine.pop();
             var a = machine.pop();
-            var value = op.applyAsLong(a,b);
+            var value = op.applyAsLong(a, b);
             machine.push(value);
         }
 
@@ -426,7 +426,7 @@ final class Primitives {
         }
     }
 
-    record PushReturn() implements Effect {
+    private record PushReturn() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -435,7 +435,7 @@ final class Primitives {
         }
     }
 
-    record PopReturn() implements Effect {
+    private record PopReturn() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -444,7 +444,7 @@ final class Primitives {
         }
     }
 
-    record PeekReturn() implements Effect {
+    private record PeekReturn() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -453,7 +453,7 @@ final class Primitives {
         }
     }
 
-    record Emit() implements Effect {
+    private record Emit() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -461,7 +461,7 @@ final class Primitives {
         }
     }
 
-    record UnaryOp(LongUnaryOperator op) implements Effect {
+    private record UnaryOp(LongUnaryOperator op) implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -499,7 +499,7 @@ final class Primitives {
         }
     }
 
-    record ReadRestOfLine() implements Effect {
+    private record ReadRestOfLine() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -507,7 +507,7 @@ final class Primitives {
         }
     }
 
-    record ReadToRightPar() implements Effect {
+    private record ReadToRightPar() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -515,7 +515,7 @@ final class Primitives {
         }
     }
 
-    record Constant() implements Effect {
+    private record Constant() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -527,7 +527,7 @@ final class Primitives {
 
     }
 
-    record Variable() implements Effect {
+    private record Variable() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -538,7 +538,7 @@ final class Primitives {
         }
     }
 
-    record DotQuote() implements Effect {
+    private record DotQuote() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -551,7 +551,7 @@ final class Primitives {
         }
     }
 
-    record Fetch() implements Effect {
+    private record Fetch() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -562,7 +562,7 @@ final class Primitives {
         }
     }
 
-    record Store() implements Effect {
+    private record Store() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -572,7 +572,7 @@ final class Primitives {
         }
     }
 
-    record Here() implements Effect {
+    private record Here() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -581,7 +581,7 @@ final class Primitives {
         }
     }
 
-    record Allot() implements Effect {
+    private record Allot() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -590,7 +590,7 @@ final class Primitives {
         }
     }
 
-    record AddStore() implements Effect {
+    private record AddStore() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -600,7 +600,7 @@ final class Primitives {
         }
     }
 
-    record Comma() implements Effect {
+    private record Comma() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -609,7 +609,7 @@ final class Primitives {
         }
     }
 
-    record DotR() implements Effect {
+    private record DotR() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -620,7 +620,7 @@ final class Primitives {
         }
     }
 
-    record DotS() implements Effect {
+    private record DotS() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -634,7 +634,7 @@ final class Primitives {
         }
     }
 
-    record Type() implements Effect {
+    private record Type() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -642,7 +642,7 @@ final class Primitives {
         }
     }
 
-    record Evaluate() implements Effect {
+    private record Evaluate() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -650,7 +650,7 @@ final class Primitives {
         }
     }
 
-    record Create() implements Effect {
+    private record Create() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -661,7 +661,7 @@ final class Primitives {
         }
     }
 
-    record Loop() implements Effect {
+    private record Loop() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -674,7 +674,7 @@ final class Primitives {
             );
         }
 
-        record InnerLoop(MachineApi machine) implements Effect {
+        private record InnerLoop(MachineApi machine) implements Effect {
 
             @Override
             public void apply(InterpreterImpl interpreter) {
@@ -683,7 +683,7 @@ final class Primitives {
         }
     }
 
-    record PlusLoop() implements Effect {
+    private record PlusLoop() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -696,7 +696,7 @@ final class Primitives {
             );
         }
 
-        record InnerPlusLoop(MachineApi machine) implements Effect {
+        private record InnerPlusLoop(MachineApi machine) implements Effect {
 
             @Override
             public void apply(InterpreterImpl i) {
@@ -705,7 +705,7 @@ final class Primitives {
         }
     }
 
-    record I() implements Effect {
+    private record I() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -714,7 +714,7 @@ final class Primitives {
         }
     }
 
-    record StoreChar() implements Effect {
+    private record StoreChar() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -725,7 +725,7 @@ final class Primitives {
         }
     }
 
-    record FetchChar() implements Effect {
+    private record FetchChar() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -736,7 +736,7 @@ final class Primitives {
         }
     }
 
-    record Do() implements Effect {
+    private record Do() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -748,7 +748,7 @@ final class Primitives {
 
     }
 
-    record QDo() implements Effect {
+    private record QDo() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -762,7 +762,7 @@ final class Primitives {
             interpreter.machine().push(open.size());
         }
 
-        record InnerDo(MachineApi machine) implements Effect {
+        private record InnerDo(MachineApi machine) implements Effect {
 
             @Override
             public void apply(InterpreterImpl i) {
@@ -779,18 +779,20 @@ final class Primitives {
         }
     }
 
-    record See() implements Effect {
+    private record See() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
             var name = interpreter.word("SEE");
-            var word = interpreter.dictionary().lookup(name)
-                .orElseThrow(() -> new FjorthException(name + " ?"));
+            var word = interpreter.dictionary().lookup(name);
+            if (word == null) {
+                throw new FjorthException(name + " ?");
+            };
             interpreter.print(render(word));
         }
     }
 
-    record ImmediateDoes() implements Effect {
+    private record ImmediateDoes() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -798,7 +800,7 @@ final class Primitives {
         }
     }
 
-    record If() implements Effect {
+    private record If() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -808,7 +810,7 @@ final class Primitives {
         }
     }
 
-    record Else() implements Effect {
+    private record Else() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -821,7 +823,7 @@ final class Primitives {
         }
     }
 
-    record Then() implements Effect {
+    private record Then() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -830,7 +832,7 @@ final class Primitives {
         }
     }
 
-    record Begin() implements Effect {
+    private record Begin() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -838,7 +840,7 @@ final class Primitives {
         }
     }
 
-    record Until() implements Effect {
+    private record Until() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -846,7 +848,7 @@ final class Primitives {
         }
     }
 
-    record While() implements Effect {
+    private record While() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -856,7 +858,7 @@ final class Primitives {
         }
     }
 
-    record Repeat() implements Effect {
+    private record Repeat() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -868,7 +870,7 @@ final class Primitives {
         }
     }
 
-    record Leave() implements Effect {
+    private record Leave() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -879,7 +881,7 @@ final class Primitives {
             interpreter.open().addLeave(at);
         }
 
-        record PopReturn2(MachineApi machine) implements Effect {
+        private record PopReturn2(MachineApi machine) implements Effect {
 
             @Override
             public void apply(InterpreterImpl i) {
@@ -889,7 +891,7 @@ final class Primitives {
         }
     }
 
-    record ImmediateRecurse() implements Effect {
+    private record ImmediateRecurse() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -897,7 +899,7 @@ final class Primitives {
         }
     }
 
-    record Exit() implements Effect {
+    private record Exit() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -905,7 +907,7 @@ final class Primitives {
         }
     }
 
-    record J() implements Effect {
+    private record J() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -914,7 +916,7 @@ final class Primitives {
         }
     }
 
-    record Erase() implements Effect {
+    private record Erase() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -925,7 +927,7 @@ final class Primitives {
         }
     }
 
-    record Fill() implements Effect {
+    private record Fill() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -937,7 +939,7 @@ final class Primitives {
         }
     }
 
-    record Words() implements Effect {
+    private record Words() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -949,7 +951,7 @@ final class Primitives {
         }
     }
 
-    record AbortQuote() implements Effect {
+    private record AbortQuote() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -969,7 +971,7 @@ final class Primitives {
 
     }
 
-    record Abort() implements Effect {
+    private record Abort() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -977,7 +979,7 @@ final class Primitives {
         }
     }
 
-    record MachinePush(MachineApi machine, long value) implements Effect {
+    private record MachinePush(MachineApi machine, long value) implements Effect {
 
         @Override
         public void apply(InterpreterImpl i) {
@@ -985,7 +987,7 @@ final class Primitives {
         }
     }
 
-    record InnerDo(MachineApi machine) implements Effect {
+    private record InnerDo(MachineApi machine) implements Effect {
 
         @Override
         public void apply(InterpreterImpl i) {
@@ -996,7 +998,7 @@ final class Primitives {
         }
     }
 
-    record Print(String text) implements Effect {
+    private record Print(String text) implements Effect {
 
         @Override
         public void apply(InterpreterImpl i) {
@@ -1004,7 +1006,7 @@ final class Primitives {
         }
     }
 
-    record MakeLatestImmediate() implements Effect {
+    private record MakeLatestImmediate() implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
