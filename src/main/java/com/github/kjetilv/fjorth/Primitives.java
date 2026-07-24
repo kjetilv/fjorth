@@ -6,6 +6,13 @@ import static com.github.kjetilv.fjorth.Word.*;
 
 final class Primitives {
 
+    private Primitives() {
+    }
+
+    private static final UnaryOp.Identity IDENTITY = new UnaryOp.Identity();
+
+    private static final Noop NOOP = new Noop();
+
     public static final List<Word> WORDS = List.of(
         binary("*", new BinaryOp.Mul()),
         binary("+", new BinaryOp.Add()),
@@ -78,16 +85,13 @@ final class Primitives {
         primitive("VARIABLE", new Variable()),
         primitive("WORDS", new Words()),
         unary("0=", new UnaryOp.Eq0()),
-        unary("ALIGNED", cells -> cells),
-        unary("CELLS", new UnaryOp.Identity()),
+        unary("ALIGNED", IDENTITY),
+        unary("CELLS", IDENTITY),
         unary("INVERT", new UnaryOp.Invert())
     );
 
-    private Primitives() {
-    }
-
     private static Word noop(String name) {
-        return primitive(name, new Noop());
+        return primitive(name, NOOP);
     }
 
     private static String render(Word word) {
@@ -657,7 +661,7 @@ final class Primitives {
             var name = interpreter.word("CREATE");
             var machine = interpreter.machine();
             long address = interpreter.machine().here();
-            interpreter.define(Word.primitive(name, false, new MachinePush(machine, address)));
+            interpreter.define(Word.primitive(name, new MachinePush(machine, address)));
         }
     }
 
@@ -958,10 +962,7 @@ final class Primitives {
             var text = interpreter.readUntil('"');
             var machine = interpreter.machine();
             if (machine.compiling()) {
-                interpreter.append(Word.primitive(
-                    "(.\")",
-                    new Print(text)
-                ));
+                interpreter.append(Word.primitive("(.\")", new Print(text)));
                 machine.compiling(false);
             } else {
                 interpreter.print(text);
