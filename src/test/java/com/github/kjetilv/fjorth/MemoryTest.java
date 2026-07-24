@@ -5,10 +5,6 @@ import org.junit.jupiter.api.Test;
 
 class MemoryTest extends InterpreterTestCase {
 
-    private final HeapMachine machine = new HeapMachine();
-
-    private final Interpreter interpreter = machine.interpreter(Consoles.to(new StringWriter()));
-
     @Test
     void allotAdvancesHere() {
         stackAfter("HERE 3 ALLOT HERE SWAP -", 3);
