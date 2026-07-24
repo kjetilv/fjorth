@@ -244,13 +244,15 @@ final class InterpreterImpl implements Interpreter {
             case Leave.PopReturn2 popReturn2 -> popReturn2.apply(this);
             case Loop loop -> loop.apply(this);
             case Loop.InnerLoop innerLoop -> innerLoop.apply(this);
-            case PlusLoop.InnerPlusLoop innerPlusLoop -> innerPlusLoop.apply(this);
-            case Noop _ -> {
-            }
+            case MachinePush machinePush -> machinePush.apply(this);
+            case MakeLatestImmediate makeLatestImmediate -> makeLatestImmediate.apply(this);
+            case Noop noop -> noop.apply(this);
             case Over over -> over.apply(this);
             case PeekReturn peekReturn -> peekReturn.apply(this);
             case PlusLoop plusLoop -> plusLoop.apply(this);
+            case PlusLoop.InnerPlusLoop innerPlusLoop -> innerPlusLoop.apply(this);
             case PopReturn popReturn -> popReturn.apply(this);
+            case Print print -> print.apply(this);
             case PushReturn pushReturn -> pushReturn.apply(this);
             case QDo qDo -> qDo.apply(this);
             case QDo.InnerDo innerDo -> innerDo.apply(this);
@@ -270,9 +272,6 @@ final class InterpreterImpl implements Interpreter {
             case Variable variable -> variable.apply(this);
             case While while_ -> while_.apply(this);
             case Words words -> words.apply(this);
-            case Print print -> print.apply(this);
-            case MachinePush machinePush -> machinePush.apply(this);
-            case MakeLatestImmediate makeLatestImmediate -> makeLatestImmediate.apply(this);
         }
     }
 

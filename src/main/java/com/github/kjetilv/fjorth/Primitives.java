@@ -176,7 +176,7 @@ final class Primitives {
         return primitive(name, new UnaryOp(op));
     }
 
-    private static Word binary(String name, LongBinaryOperator op) {
+    private static Word binary(String name, BinaryOp.LongOp op) {
         return primitive(name, new BinaryOp(op));
     }
 
@@ -317,7 +317,7 @@ final class Primitives {
 
     }
 
-    record BinaryOp(LongBinaryOperator op) implements Effect {
+    record BinaryOp(LongOp op) implements Effect {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
@@ -336,12 +336,11 @@ final class Primitives {
                 case And and -> and.applyAsLong(a, b);
                 case Or or -> or.applyAsLong(a, b);
                 case Xor xor -> xor.applyAsLong(a, b);
-                default -> op.applyAsLong(a, b);
             };
             machine.push(value);
         }
 
-        private record Add() implements LongBinaryOperator {
+        private record Add() implements LongOp {
 
             @Override
             public long applyAsLong(long a, long b) {
@@ -349,7 +348,7 @@ final class Primitives {
             }
         }
 
-        private static class Sub implements LongBinaryOperator {
+        private record Sub() implements LongOp {
 
             @Override
             public long applyAsLong(long a, long b) {
@@ -357,7 +356,7 @@ final class Primitives {
             }
         }
 
-        private static class Mul implements LongBinaryOperator {
+        private record Mul() implements LongOp {
 
             @Override
             public long applyAsLong(long a, long b) {
@@ -365,7 +364,7 @@ final class Primitives {
             }
         }
 
-        private static class Div implements LongBinaryOperator {
+        private record Div() implements LongOp {
 
             @Override
             public long applyAsLong(long a, long b) {
@@ -376,7 +375,7 @@ final class Primitives {
             }
         }
 
-        private static class Mod implements LongBinaryOperator {
+        private record Mod() implements LongOp {
 
             @Override
             public long applyAsLong(long a, long b) {
@@ -387,7 +386,7 @@ final class Primitives {
             }
         }
 
-        private static class Eql implements LongBinaryOperator {
+        private record Eql() implements LongOp {
 
             @Override
             public long applyAsLong(long a, long b) {
@@ -395,7 +394,7 @@ final class Primitives {
             }
         }
 
-        private static class LTh implements LongBinaryOperator {
+        private record LTh() implements LongOp {
 
             @Override
             public long applyAsLong(long a, long b) {
@@ -403,7 +402,7 @@ final class Primitives {
             }
         }
 
-        private static class GTh implements LongBinaryOperator {
+        private record GTh() implements LongOp {
 
             @Override
             public long applyAsLong(long a, long b) {
@@ -411,7 +410,7 @@ final class Primitives {
             }
         }
 
-        private static class And implements LongBinaryOperator {
+        private record And() implements LongOp {
 
             @Override
             public long applyAsLong(long a, long b) {
@@ -419,7 +418,7 @@ final class Primitives {
             }
         }
 
-        private static class Or implements LongBinaryOperator {
+        private record Or() implements LongOp {
 
             @Override
             public long applyAsLong(long a, long b) {
@@ -427,12 +426,15 @@ final class Primitives {
             }
         }
 
-        private static class Xor implements LongBinaryOperator {
+        private record Xor() implements LongOp {
 
             @Override
             public long applyAsLong(long a, long b) {
                 return a ^ b;
             }
+        }
+
+        sealed interface LongOp extends LongBinaryOperator {
         }
     }
 
@@ -486,7 +488,7 @@ final class Primitives {
             machine.push(value);
         }
 
-        static class Identity implements LongUnaryOperator {
+        record Identity() implements UnaryOp.LongOp {
 
             @Override
             public long applyAsLong(long cells) {
@@ -494,7 +496,7 @@ final class Primitives {
             }
         }
 
-        private static class Eq0 implements LongUnaryOperator {
+        record Eq0() implements UnaryOp.LongOp {
 
             @Override
             public long applyAsLong(long a) {
@@ -502,12 +504,15 @@ final class Primitives {
             }
         }
 
-        private static class Invert implements LongUnaryOperator {
+        record Invert() implements UnaryOp.LongOp {
 
             @Override
             public long applyAsLong(long a) {
                 return ~a;
             }
+        }
+
+        sealed interface LongOp extends LongUnaryOperator {
         }
     }
 

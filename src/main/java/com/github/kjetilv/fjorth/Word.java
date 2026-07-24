@@ -78,8 +78,6 @@ sealed interface Word {
     }
 
     sealed interface Effect permits Definition.PrimitiveDoes,
-        Definition.PrimitiveDoes.InnerDoes,
-        Definition.Recurse,
         Abort,
         AbortQuote,
         AddStore,
@@ -91,6 +89,8 @@ sealed interface Word {
         Comma,
         Constant,
         Create,
+        Definition.PrimitiveDoes.InnerDoes,
+        Definition.Recurse,
         Do,
         Dot,
         DotQuote,
@@ -119,13 +119,13 @@ sealed interface Word {
         Loop,
         Loop.InnerLoop,
         MachinePush,
-        Primitives.MakeLatestImmediate,
         Noop,
         Over,
         PeekReturn,
         PlusLoop,
         PlusLoop.InnerPlusLoop,
         PopReturn,
+        Primitives.MakeLatestImmediate,
         Print,
         PushReturn,
         QDo,
@@ -145,7 +145,8 @@ sealed interface Word {
         Until,
         Variable,
         While,
-        Words {
+        Words
+    {
 
         @SuppressWarnings("ClassEscapesDefinedScope")
         void apply(InterpreterImpl interpreter);
