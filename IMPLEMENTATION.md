@@ -2,7 +2,9 @@
 
 Companion to [PLAN.md](PLAN.md). One section per phase: what was executed, what was
 learned, and where and why the implementation deviated from the plan. All phases are
-complete; post-plan work is logged at the end. The suite stands at 138 tests.
+complete; post-plan work is logged at the end. As of 2026-07-24 the codebase has
+since been refactored for performance/structure (final section). The suite has
+147 @Test methods, all green (2026-07-24).
 
 ## Phase 0 — Project scaffolding
 
@@ -400,3 +402,40 @@ aligning versions, exactly as the error's own "update dependencies" hint says.
   test expectation from hand-tracing stack effects**, never a wrong implementation.
   The interpreter-driven test harness (`stackAfter(String)` → `long[]`) proved the
   right level of abstraction: tests read as Forth transcripts.
+
+## Performance & structure refactor (2026-07-24, user-authored; assessed only)
+
+The user restructured the codebase for performance and cleaner boundaries. Not
+authored by this agent — assessed and documented. Summary:
+
+- **Facade replaced.** `Fjorth`/`Out`/`Stdout`/`Bootstrap` gone. Public surface is
+  now `Machine` (interface, factory-of-`Interpreter`), `Interpreter` (interface,
+  `interpret(String) → Result` where `Result = OK | Failed(message)`, no longer
+  `AutoCloseable`), and `Console`/`Consoles` (output; `Console` gains `reset()`).
+  `HeapMachine` (was `Machine`) and `InterpreterImpl` (was `Interpreter`) are the
+  package-private impls; `MachineApi` is the internal stack/memory contract.
+  `FjorthException` is now package-private. Library bootstrap moved from
+  `Bootstrap` into `HeapMachine.build` → `InterpreterImpl.unsealed(...)
+  .loadLibrary("fjorth.fs").seal()`.
+- **Dispatch: named Effect types, not lambdas.** Each primitive is a distinct
+  record implementing `Effect`; arithmetic goes through `BinaryOp(LongOp)` with a
+  named op per operator. Commit names ("Megamorphism vs. sealed") indicate the
+  goal is monomorphic/bimorphic JIT call sites rather than one megamorphic
+  lambda-invocation site. Deliberate — not to be collapsed back to lambdas.
+- **Dictionary: O(1) map for the base vocabulary** (immutable `Map`, sealed) with
+  user definitions still chained; replaces the old O(n) persistent-chain scan.
+  `unsealed`/`insert`/`seal` lifecycle supports mutating-then-freezing during
+  bootstrap.
+- **Larger machine defaults** (stack 1024, memory 65536) for the new algorithmic
+  benchmark suites (`BubbleSortTest`, `FibTest`, `PrimesTest`, `LibTest`).
+- **Vocabulary added**: `C@`/`C!`, `ABORT`/`ABORT"`, `ALIGN`/`CELLS+` (no-ops),
+  and double-cell words `2@ 2R@ 2R> 2>R 2SWAP 2OVER` in `fjorth.fs`. Tests
+  reorganized under an `InterpreterTestCase` base (shared static machine, reset
+  per test); 147 @Test methods across 15 files.
+
+**Build status: green (2026-07-24).** The refactor briefly left the tree
+non-compiling — `repl.java` (default package) called the package-private
+`HeapMachine.create()`. The user resolved it by adding a public static
+`Machine.create()` factory on the `Machine` interface (delegating to
+`HeapMachine`); `repl.java` now does `Machine.create().interpreter(CONSOLE)`.
+`./gradlew test` green, all 147 tests. Native tasks not re-run since the refactor.

@@ -2,6 +2,7 @@ plugins {
     id("java")
     id("application")
     id("org.graalvm.buildtools.native") version "0.11.0"
+    id("me.champeau.jmh") version "0.7.3"
 }
 
 group = "com.github.kjetilv"
@@ -33,6 +34,14 @@ application {
 
 tasks.named<JavaExec>("run") {
     standardInput = System.`in`
+}
+
+// JMH microbenchmarks live in src/jmh/java, with their .fs programs in
+// src/jmh/resources. Run all with `./gradlew jmh`, or one target with
+// `./gradlew jmh -Pjmh.includes=Sieve` / `-Pjmh.includes=Fibonacci`.
+jmh {
+    jmhVersion = "1.37"
+    resultFormat = "TEXT"
 }
 
 // Produces a native executable via `./gradlew nativeCompile`

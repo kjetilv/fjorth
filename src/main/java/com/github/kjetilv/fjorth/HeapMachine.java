@@ -7,10 +7,6 @@ final class HeapMachine implements MachineApi {
 
     public static final int CHAR_MASK = 0xFFFF;
 
-    public static Machine create() {
-        return new HeapMachine();
-    }
-
     private final long[] data;
 
     private final long[] returns;
