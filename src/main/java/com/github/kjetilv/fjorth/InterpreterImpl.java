@@ -26,7 +26,7 @@ final class InterpreterImpl implements Interpreter {
 
     private final boolean sealed;
 
-    private String input = "";
+    private char[] input = EMPTY_CHARS;
 
     private int pos;
 
@@ -47,7 +47,7 @@ final class InterpreterImpl implements Interpreter {
     @Override
     public Result interpret(String line) {
         try {
-            input = line;
+            input = line.toCharArray();
             pos = 0;
             try {
                 processTokens();
@@ -72,15 +72,15 @@ final class InterpreterImpl implements Interpreter {
     }
 
     void evaluate(String text) {
-        var savedInput = input;
+        var savedInputChars = input;
         var savedPos = pos;
         var savedTokenStart = tokenStart;
-        input = text;
+        input = text.toCharArray();
         pos = 0;
         try {
             processTokens();
         } finally {
-            input = savedInput;
+            input = savedInputChars;
             pos = savedPos;
             tokenStart = savedTokenStart;
         }
@@ -144,18 +144,19 @@ final class InterpreterImpl implements Interpreter {
 
     String readUntil(char delimiter) {
         var start = pos;
-        while (pos < input.length() && input.charAt(pos) != delimiter) {
+        var length = input.length;
+        while (pos < length && input[pos] != delimiter) {
             pos++;
         }
-        var text = input.substring(start, pos);
-        if (pos < input.length()) {
+        var text = new String(input, start, pos - start);
+        if (pos < length) {
             pos++;
         }
         return text;
     }
 
     void readRestOfLine() {
-        pos = input.length();
+        pos = input.length;
     }
 
     void execute(Word word) {
@@ -193,7 +194,7 @@ final class InterpreterImpl implements Interpreter {
 
     void reset(Dictionary dictionary) {
         this.machine.reset();
-        this.input = "";
+        this.input = EMPTY_CHARS;
         this.pos = 0;
         this.tokenStart = 0;
         this.definition = null;
@@ -215,7 +216,7 @@ final class InterpreterImpl implements Interpreter {
             try {
                 handle(token);
             } catch (FjorthException e) {
-                throw e.locate(input, tokenStart);
+                throw e.locate(new String(input), tokenStart);
             } catch (Exception e) {
                 throw new IllegalStateException("Failed to process tokens", e);
             }
@@ -243,18 +244,18 @@ final class InterpreterImpl implements Interpreter {
 
     private void handle(String token) {
         var word = dictionary.lookup(token);
-        if (word != null) {
-            if (machine.compiling() && !word.immediate()) {
-                append(word);
-            } else {
-                execute(word);
-            }
-        } else {
+        if (word == null) {
             var value = number(token);
             if (machine.compiling()) {
                 append(Word.literal(value));
             } else {
                 machine.push(value);
+            }
+        } else {
+            if (machine.compiling() && !word.immediate()) {
+                append(word);
+            } else {
+                execute(word);
             }
         }
     }
@@ -276,18 +277,19 @@ final class InterpreterImpl implements Interpreter {
     }
 
     private String nextToken() {
-        while (pos < input.length() && Character.isWhitespace(input.charAt(pos))) {
+        var length = input.length;
+        while (pos < length && Character.isWhitespace(input[pos])) {
             pos++;
         }
-        if (pos == input.length()) {
+        if (pos == length) {
             return null;
         }
         tokenStart = pos;
-        while (pos < input.length() && !Character.isWhitespace(input.charAt(pos))) {
+        while (pos < length && !Character.isWhitespace(input[pos])) {
             pos++;
         }
-        var token = input.substring(tokenStart, pos);
-        if (pos < input.length()) {
+        var token = new String(input, tokenStart, pos - tokenStart);
+        if (pos < length) {
             pos++;
         }
         return token;
@@ -303,8 +305,9 @@ final class InterpreterImpl implements Interpreter {
 
     private static final Result.OK OK = new Result.OK();
 
+    private static final char[] EMPTY_CHARS = new char[0];
+
     private static void outsideDefinition(int target) {
         throw new FjorthException("branch outside definition: " + target);
     }
-
 }

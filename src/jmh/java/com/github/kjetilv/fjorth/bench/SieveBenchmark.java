@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 /// (`C@`/`C!`/`FILL`), nested `DO`/`+LOOP`, and dictionary lookup under load.
 @State(Scope.Thread)
 @BenchmarkMode(Mode.AverageTime)
-@OutputTimeUnit(TimeUnit.NANOSECONDS)
+@OutputTimeUnit(TimeUnit.MILLISECONDS)
 @Warmup(iterations = 5, time = 1)
 @Measurement(iterations = 5, time = 1)
 @Fork(3)
