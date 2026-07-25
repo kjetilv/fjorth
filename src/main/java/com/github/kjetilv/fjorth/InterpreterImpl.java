@@ -260,8 +260,7 @@ final class InterpreterImpl implements Interpreter {
 
     private void executeAll(Word[] body) {
         for (int pointer = 0; pointer < body.length; ) {
-            pointer =
-                switch (body[pointer]) {
+            pointer = switch (body[pointer]) {
                 case Word.Branch(var nextPointer) -> nextPointer;
                 case Word.ZeroBranch(var nextPointer) -> machine.pop() == 0
                     ? nextPointer

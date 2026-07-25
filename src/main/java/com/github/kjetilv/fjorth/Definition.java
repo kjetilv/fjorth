@@ -108,7 +108,8 @@ final class Definition {
 
     private static Word retrofit(Word.Colon tailColon) {
         return Word.primitive(
-            "(does>)", interpreter -> {
+            "(does>)",
+            interpreter -> {
                 Word latest = interpreter.dictionary().latest();
                 String name;
                 try {

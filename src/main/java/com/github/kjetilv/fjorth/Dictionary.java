@@ -74,12 +74,12 @@ final class Dictionary {
         return word;
     }
 
-    Stream<Word> words() {
-        var local =
-            word != null ? Stream.of(word)
-                : words == null ? Stream.<Word>empty()
-                    : words.values()
-                        .stream();
+    Stream<String> words() {
+        var local = word != null ? Stream.of(word.name())
+            : words == null ? Stream.<String>empty()
+                : words.values()
+                    .stream()
+                    .map(Word::name);
         return parent == null
             ? local
             : Stream.concat(local, parent.words());

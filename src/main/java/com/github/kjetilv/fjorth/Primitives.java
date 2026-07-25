@@ -150,7 +150,6 @@ final class Primitives {
     }
 
     private static void closeLoop(InterpreterImpl interpreter, Word runtime) {
-        var machine = interpreter.machine();
         var open = interpreter.openDefinition();
         try {
             open.endLoop();
@@ -160,7 +159,7 @@ final class Primitives {
         } catch (NullPointerException e) {
             throw new FjorthException("compilation outside definition");
         }
-        var dest = machine.ipop();
+        var dest = interpreter.machine().ipop();
         interpreter.append(runtime);
         interpreter.append(zeroBranch(dest));
         open.closeLoop();
@@ -1011,7 +1010,6 @@ final class Primitives {
         @Override
         public void apply(InterpreterImpl interpreter) {
             interpreter.print(interpreter.dictionary().words()
-                .map(Word::name)
                 .distinct()
                 .collect(Collectors.joining(" ")));
             interpreter.print('\n');
