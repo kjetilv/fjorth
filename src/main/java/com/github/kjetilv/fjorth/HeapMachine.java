@@ -165,9 +165,7 @@ final class HeapMachine implements MachineApi {
         if (count > 0) {
             var addr = checkAddress(address);
             var toAddr = checkAddress(address + count);
-            for (int position = addr; position < toAddr; position++) {
-                memory[position] = value;
-            }
+            Arrays.fill(memory, addr, toAddr, value);
         }
     }
 

@@ -44,7 +44,7 @@ sealed interface Word {
         }
 
         Word asImmediate() {
-            return immediate ? this : new Colon(name, true, body);
+            return new Colon(name, true, body);
         }
     }
 
@@ -54,7 +54,6 @@ sealed interface Word {
         public String name() {
             return "(literal)";
         }
-
     }
 
     record Branch(int target) implements Word {
@@ -63,7 +62,6 @@ sealed interface Word {
         public String name() {
             return "(branch)";
         }
-
     }
 
     record ZeroBranch(int target) implements Word {
