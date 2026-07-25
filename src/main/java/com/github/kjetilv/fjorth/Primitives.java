@@ -706,7 +706,8 @@ final class Primitives {
         @Override
         public void apply(InterpreterImpl interpreter) {
             var machine = interpreter.machine();
-            machine.push(index(machine.peekReturn(), machine.peekReturn(1)));
+            var index = index(machine.peekReturn(), machine.peekReturn(1));
+            machine.push(index);
         }
     }
 
