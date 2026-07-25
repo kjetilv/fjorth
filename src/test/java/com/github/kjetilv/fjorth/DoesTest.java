@@ -61,7 +61,7 @@ class DoesTest extends InterpreterTestCase {
     @Test
     void multipleDoesFails() {
         var message = interpretFailed(": BAD CREATE DOES> @ DOES> @ ;");
-        assertTrue(message.startsWith("multiple DOES>"), () -> message);
+        assertTrue(message.startsWith("multiple DOES>"), message);
     }
 
     @Test

@@ -820,7 +820,7 @@ final class Primitives {
         @Override
         public void apply(InterpreterImpl interpreter) {
             var open = interpreter.openDefinition();
-            int at = 0;
+            int at;
             try {
                 at = open.size();
             } catch (NullPointerException e) {
@@ -838,7 +838,7 @@ final class Primitives {
             var machine = interpreter.machine();
             var ifAt = machine.ipop();
             var open = interpreter.openDefinition();
-            int elseAt = 0;
+            int elseAt;
             try {
                 elseAt = open.size();
             } catch (NullPointerException e) {
@@ -871,7 +871,7 @@ final class Primitives {
         @Override
         public void apply(InterpreterImpl interpreter) {
             var open = interpreter.openDefinition();
-            int size = 0;
+            int size;
             try {
                 size = open.size();
             } catch (NullPointerException e) {
@@ -894,7 +894,7 @@ final class Primitives {
         @Override
         public void apply(InterpreterImpl interpreter) {
             var open = interpreter.openDefinition();
-            int at = 0;
+            int at;
             try {
                 at = open.size();
             } catch (NullPointerException e) {
@@ -914,7 +914,7 @@ final class Primitives {
             var dest = machine.ipop();
             interpreter.append(branch(dest));
             var open = interpreter.openDefinition();
-            int size = 0;
+            int size;
             try {
                 size = open.size();
             } catch (NullPointerException e) {
@@ -931,7 +931,7 @@ final class Primitives {
             var machine = interpreter.machine();
             interpreter.append(primitive("(unloop)", new PopReturn2(machine)));
             var open = interpreter.openDefinition();
-            int at = 0;
+            int at;
             try {
                 at = open.size();
             } catch (NullPointerException e) {
