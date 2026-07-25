@@ -9,7 +9,7 @@ final class Primitives {
     private Primitives() {
     }
 
-    static final Word[] WORDS = new Word[] {
+    static final Word[] WORDS = {
         binary("*", new BinaryOp.Mul()),
         binary("+", new BinaryOp.Add()),
         binary("-", new BinaryOp.Sub()),
@@ -151,13 +151,19 @@ final class Primitives {
 
     private static void closeLoop(InterpreterImpl interpreter, Word runtime) {
         var machine = interpreter.machine();
-        var open = interpreter.open();
-        var leaves = open.endLoop();
+        var open = interpreter.openDefinition();
+        try {
+            open.endLoop();
+        } catch (FjorthException e) {
+            e.fillInStackTrace();
+            throw e;
+        } catch (NullPointerException e) {
+            throw new FjorthException("compilation outside definition");
+        }
         var dest = machine.ipop();
         interpreter.append(runtime);
         interpreter.append(zeroBranch(dest));
-        var after = open.size();
-        leaves.forEach(site -> open.resolve(site, after));
+        open.closeLoop();
     }
 
     private static Word primitive(String name, Effect effect) {
@@ -733,8 +739,13 @@ final class Primitives {
         public void apply(InterpreterImpl interpreter) {
             var machine = interpreter.machine();
             interpreter.append(primitive("(do)", new InnerDo(machine)));
-            interpreter.open().beginLoop();
-            interpreter.machine().push(interpreter.open().size());
+            var open = interpreter.openDefinition();
+            try {
+                open.beginLoop();
+            } catch (NullPointerException e) {
+                throw new FjorthException("compilation outside definition");
+            }
+            interpreter.machine().push(open.size());
         }
 
     }
@@ -745,8 +756,13 @@ final class Primitives {
         public void apply(InterpreterImpl interpreter) {
             var machine = interpreter.machine();
             interpreter.append(primitive("(?do)", new InnerDo(machine)));
-            var open = interpreter.open();
-            open.beginLoop();
+            var open = interpreter.openDefinition();
+            try {
+                open.beginLoop();
+            } catch (NullPointerException e) {
+                throw new FjorthException("compilation outside definition");
+
+            }
             var skip = open.size();
             interpreter.append(zeroBranch(-1));
             open.addLeave(skip);
@@ -787,7 +803,15 @@ final class Primitives {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
-            interpreter.open().beginTail();
+            var open = interpreter.openDefinition();
+            try {
+                open.beginTail();
+            } catch (NullPointerException e) {
+                throw new FjorthException("compilation outside definition");
+            } catch (FjorthException e) {
+                e.fillInStackTrace();
+                throw e;
+            }
         }
     }
 
@@ -795,7 +819,13 @@ final class Primitives {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
-            var at = interpreter.open().size();
+            var open = interpreter.openDefinition();
+            int at = 0;
+            try {
+                at = open.size();
+            } catch (NullPointerException e) {
+                throw new FjorthException("compilation outside definition");
+            }
             interpreter.append(zeroBranch(-1));
             interpreter.machine().push(at);
         }
@@ -807,9 +837,15 @@ final class Primitives {
         public void apply(InterpreterImpl interpreter) {
             var machine = interpreter.machine();
             var ifAt = machine.ipop();
-            var elseAt = interpreter.open().size();
+            var open = interpreter.openDefinition();
+            int elseAt = 0;
+            try {
+                elseAt = open.size();
+            } catch (NullPointerException e) {
+                throw new FjorthException("compilation outside definition");
+            }
             interpreter.append(branch(-1));
-            interpreter.open().resolve(ifAt, interpreter.open().size());
+            open.resolve(ifAt, open.size());
             machine.push(elseAt);
         }
     }
@@ -819,7 +855,14 @@ final class Primitives {
         @Override
         public void apply(InterpreterImpl interpreter) {
             var at = interpreter.machine().ipop();
-            interpreter.open().resolve(at, interpreter.open().size());
+            var open = interpreter.openDefinition();
+            int size;
+            try {
+                size = open.size();
+            } catch (NullPointerException e) {
+                throw new FjorthException("compilation outside definition");
+            }
+            open.resolve(at, size);
         }
     }
 
@@ -827,7 +870,14 @@ final class Primitives {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
-            interpreter.machine().push(interpreter.open().size());
+            var open = interpreter.openDefinition();
+            int size = 0;
+            try {
+                size = open.size();
+            } catch (NullPointerException e) {
+                throw new FjorthException("compilation outside definition");
+            }
+            interpreter.machine().push(size);
         }
     }
 
@@ -843,7 +893,13 @@ final class Primitives {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
-            var at = interpreter.open().size();
+            var open = interpreter.openDefinition();
+            int at = 0;
+            try {
+                at = open.size();
+            } catch (NullPointerException e) {
+                throw new FjorthException("compilation outside definition");
+            }
             interpreter.append(zeroBranch(-1));
             interpreter.machine().push(at);
         }
@@ -857,7 +913,14 @@ final class Primitives {
             var whileAt = machine.ipop();
             var dest = machine.ipop();
             interpreter.append(branch(dest));
-            interpreter.open().resolve(whileAt, interpreter.open().size());
+            var open = interpreter.openDefinition();
+            int size = 0;
+            try {
+                size = open.size();
+            } catch (NullPointerException e) {
+                throw new FjorthException("compilation outside definition");
+            }
+            open.resolve(whileAt, size);
         }
     }
 
@@ -867,9 +930,15 @@ final class Primitives {
         public void apply(InterpreterImpl interpreter) {
             var machine = interpreter.machine();
             interpreter.append(primitive("(unloop)", new PopReturn2(machine)));
-            var at = interpreter.open().size();
+            var open = interpreter.openDefinition();
+            int at = 0;
+            try {
+                at = open.size();
+            } catch (NullPointerException e) {
+                throw new FjorthException("compilation outside definition");
+            }
             interpreter.append(branch(-1));
-            interpreter.open().addLeave(at);
+            open.addLeave(at);
         }
 
         private record PopReturn2(MachineApi machine) implements Effect {
@@ -886,7 +955,14 @@ final class Primitives {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
-            interpreter.append(interpreter.open().recurse());
+            var open = interpreter.openDefinition();
+            Word recurse;
+            try {
+                recurse = open.recurse();
+            } catch (NullPointerException e) {
+                throw new FjorthException("compilation outside definition");
+            }
+            interpreter.append(recurse);
         }
     }
 

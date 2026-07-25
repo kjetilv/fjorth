@@ -6,11 +6,13 @@ final class Definition {
 
     private final String name;
 
-    private final List<Word> body = new ArrayList<>();
+    private final List<Word> body = new ArrayList<>(32);
 
     private List<Word> tail;
 
     private final Deque<List<Integer>> loops = new ArrayDeque<>();
+
+    private List<Integer> closingLoop;
 
     /// Works as a _final but mutable cell_ to allow new values set from lambdas
     private final Word[] self = new Word[1];
@@ -28,20 +30,14 @@ final class Definition {
     }
 
     void resolve(int index, int target) {
-        var active = active();
-        var resolved = switch (active.get(index)) {
-            case Word.Branch(var _) -> Word.branch(target);
-            case Word.ZeroBranch(var _) -> new Word.ZeroBranch(target);
-            case Word word -> throw new FjorthException("not a branch: " + word.name());
-        };
-        active.set(index, resolved);
+        resolve(active(), index, target);
     }
 
     void beginTail() {
         if (tail != null) {
             throw new FjorthException("multiple DOES> in " + name);
         }
-        if (inLoop()) {
+        if (!loops.isEmpty()) {
             throw new FjorthException("unterminated DO before DOES> in " + name);
         }
         tail = new ArrayList<>();
@@ -59,52 +55,85 @@ final class Definition {
         sites.add(index);
     }
 
-    List<Integer> endLoop() {
-        var sites = loops.poll();
-        if (sites == null) {
+    void endLoop() {
+        closingLoop = loops.poll();
+        if (closingLoop == null) {
             throw new FjorthException("LOOP without DO");
         }
-        return sites;
+    }
+
+    void closeLoop() {
+        var active = active();
+        closingLoop.forEach(site ->
+            resolve(active, site, active.size()));
     }
 
     Word recurse() {
-        return Word.primitive("(recurse)", new Recurse(self));
+        return Word.primitive(
+            "(recurse)",
+            interpreter -> interpreter.execute(self[0])
+        );
     }
 
     Word.Colon seal() {
-        if (inLoop()) {
+        if (!loops.isEmpty()) {
             throw new FjorthException("unterminated DO in " + name);
         }
-        if (unresolvedBody() || unresolvedTail()) {
+        if (unresolved(body) || tail != null && unresolved(tail)) {
             throw new FjorthException("unresolved branch in " + name);
         }
         if (tail != null) {
-            var colon = Word.colon("(does> " + name + ")", false, tail.toArray(Word[]::new));
+            var colon = Word.colon("(does> " + name + ")", tail.toArray(Word[]::new));
             body.add(retrofit(colon));
         }
-        var colon = Word.colon(name, false, body.toArray(Word[]::new));
+        var colon = Word.colon(name, body.toArray(Word[]::new));
         self[0] = colon;
         return colon;
     }
 
-    private boolean inLoop() {
-        return !loops.isEmpty();
-    }
-
-    private boolean unresolvedBody() {
-        return body.stream().anyMatch(Definition::unresolved);
-    }
-
-    private boolean unresolvedTail() {
-        return tail != null && tail.stream().anyMatch(Definition::unresolved);
-    }
-
     private List<Word> active() {
-        return tail != null ? tail : body;
+        return tail != null
+            ? tail
+            : body;
+    }
+
+    private static void resolve(List<Word> active, int index, int target) {
+        var resolved = switch (active.get(index)) {
+            case Word.Branch(var _) -> Word.branch(target);
+            case Word.ZeroBranch(var _) -> new Word.ZeroBranch(target);
+            case Word word -> throw new FjorthException("not a branch: " + word.name());
+        };
+        active.set(index, resolved);
     }
 
     private static Word retrofit(Word.Colon tailColon) {
-        return Word.primitive("(does>)", new PrimitiveDoes(tailColon));
+        return Word.primitive(
+            "(does>)", interpreter -> {
+                Word latest = interpreter.dictionary().latest();
+                String name;
+                try {
+                    name = latest.name();
+                } catch (NullPointerException e) {
+                    throw new FjorthException("DOES>: empty dictionary");
+                }
+                interpreter.define(Word.primitive(
+                    name,
+                    _ -> {
+                        interpreter.execute(latest);
+                        interpreter.execute(tailColon);
+                    }
+                ));
+            }
+        );
+    }
+
+    private static boolean unresolved(Iterable<Word> words) {
+        for (Word word : words) {
+            if (unresolved(word)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean unresolved(Word word) {
@@ -113,34 +142,5 @@ final class Definition {
             case Word.ZeroBranch(var target) -> target < 0;
             default -> false;
         };
-    }
-
-    private record Recurse(Word[] self) implements Word.Effect {
-
-        @Override
-        public void apply(InterpreterImpl interpreter) {
-            interpreter.execute(self[0]);
-        }
-    }
-
-    private record PrimitiveDoes(Word.Colon tailColon) implements Word.Effect {
-
-        @Override
-        public void apply(InterpreterImpl interpreter) {
-            var latest = interpreter.dictionary().latest();
-            if (latest == null) {
-                throw new FjorthException("DOES>: empty dictionary");
-            }
-            interpreter.define(Word.primitive(latest.name(), new InnerDoes(latest, tailColon)));
-        }
-
-        private record InnerDoes(Word latest, Word tailColon) implements Word.Effect {
-
-            @Override
-            public void apply(InterpreterImpl interpreter) {
-                interpreter.execute(latest);
-                interpreter.execute(tailColon);
-            }
-        }
     }
 }

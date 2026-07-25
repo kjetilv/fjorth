@@ -39,6 +39,7 @@ public class InterpreterTestCase {
                         var bufferedReader = new BufferedReader(new InputStreamReader(inputStream, UTF_8))
                     ) {
                         bufferedReader.lines()
+                            .filter(line -> !line.isBlank())
                             .forEach(InterpreterTestCase::interpret);
                     } catch (Exception e) {
                         throw new IllegalStateException("Failed to load " + resource, e);

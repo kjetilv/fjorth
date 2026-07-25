@@ -41,7 +41,7 @@ class DictionaryTest {
     @Test
     void compiledReferenceSurvivesRedefinition() {
         var first = primitive("X");
-        Word caller = Word.colon("CALLER", false, first);
+        Word caller = Word.colon("CALLER", first);
         var dictionary = Dictionary.of(first)
             .define(caller)
             .define(primitive("X"));

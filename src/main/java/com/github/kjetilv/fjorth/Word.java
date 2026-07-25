@@ -12,8 +12,8 @@ sealed interface Word {
         return new Primitive(name, immediate, effect);
     }
 
-    static Colon colon(String name, boolean immediate, Word... body) {
-        return new Colon(name, immediate, body);
+    static Colon colon(String name, Word... body) {
+        return new Colon(name, false, body);
     }
 
     static Literal literal(long value) {
@@ -34,10 +34,20 @@ sealed interface Word {
 
     String name();
 
+    default Word makeImmediate() {
+        throw new FjorthException("IMMEDIATE: not a colon definition: " + name());
+    }
+
     record Primitive(String name, boolean immediate, Effect effect) implements Word {
     }
 
     record Colon(String name, boolean immediate, Word... body) implements Word {
+
+        @SuppressWarnings("ClassEscapesDefinedScope")
+        @Override
+        public Word makeImmediate() {
+            return new Colon(name, true, body);
+        }
     }
 
     record Literal(long value) implements Word {
@@ -62,7 +72,6 @@ sealed interface Word {
         public String name() {
             return "(0branch)";
         }
-
     }
 
     @FunctionalInterface

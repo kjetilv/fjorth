@@ -50,16 +50,20 @@ final class HeapMachine implements MachineApi {
 
     @Override
     public long peek() {
-        return dataStackTop > 0
-            ? dataStack[dataStackTop - 1]
-            : fail("stack underflow");
+        try {
+            return dataStack[dataStackTop - 1];
+        } catch (ArrayIndexOutOfBoundsException e) {
+            return fail("stack underflow");
+        }
     }
 
     @Override
     public long peekReturn() {
-        return returnStackTop > 0
-            ? returnStack[returnStackTop - 1]
-            : fail("return stack underflow");
+        try {
+            return returnStack[returnStackTop - 1];
+        } catch (ArrayIndexOutOfBoundsException e) {
+            return fail("return stack underflow");
+        }
     }
 
     @Override
@@ -82,21 +86,29 @@ final class HeapMachine implements MachineApi {
 
     @Override
     public void push(long value) {
-        checkOverflow();
-        dataStack[dataStackTop++] = value;
+        try {
+            dataStack[dataStackTop++] = value;
+        } catch (ArrayIndexOutOfBoundsException e) {
+            fail("stack overflow");
+        }
     }
 
     @Override
     public long pop() {
-        checkUnderflow();
-        return dataStack[--dataStackTop];
+        try {
+            return dataStack[--dataStackTop];
+        } catch (ArrayIndexOutOfBoundsException e) {
+            return fail("stack underflow");
+        }
     }
 
     @Override
     public long peek(int offset) {
-        return dataStackTop > offset
-            ? dataStack[dataStackTop - 1 - offset]
-            : fail("stack underflow");
+        try {
+            return dataStack[dataStackTop - 1 - offset];
+        } catch (ArrayIndexOutOfBoundsException e) {
+            return fail("stack underflow");
+        }
     }
 
     @Override
@@ -106,21 +118,29 @@ final class HeapMachine implements MachineApi {
 
     @Override
     public void pushReturn(long value) {
-        checkReturnOverflow();
-        returnStack[returnStackTop++] = value;
+        try {
+            returnStack[returnStackTop++] = value;
+        } catch (ArrayIndexOutOfBoundsException e) {
+            fail("return stack overflow");
+        }
     }
 
     @Override
     public long popReturn() {
-        checkReturnUnderflow();
-        return returnStack[--returnStackTop];
+        try {
+            return returnStack[--returnStackTop];
+        } catch (ArrayIndexOutOfBoundsException e) {
+            return fail("return stack underflow");
+        }
     }
 
     @Override
     public long peekReturn(int offset) {
-        return returnStackTop > offset
-            ? returnStack[returnStackTop - 1 - offset]
-            : fail("return stack underflow");
+        try {
+            return returnStack[returnStackTop - 1 - offset];
+        } catch (ArrayIndexOutOfBoundsException e) {
+            return fail("return stack underflow");
+        }
     }
 
     @Override
@@ -148,23 +168,35 @@ final class HeapMachine implements MachineApi {
 
     @Override
     public long fetch(long address) {
-        return memory[checkAddress(address)];
+        try {
+            return memory[Math.toIntExact(address)];
+        } catch (ArrayIndexOutOfBoundsException e) {
+            return fail("invalid address: " + address);
+        }
     }
 
     @Override
     public void store(long address, long value) {
-        memory[checkAddress(address)] = value;
+        try {
+            memory[Math.toIntExact(address)] = value;
+        } catch (Exception e) {
+            fail("invalid address: " + address);
+        }
     }
 
     @Override
     public void store(long address, long count, long value) {
         if (count > 0) {
-            Arrays.fill(
-                memory,
-                checkAddress(address),
-                checkAddress(address + count),
-                value
-            );
+            try {
+                Arrays.fill(
+                    memory,
+                    Math.toIntExact(address),
+                    Math.toIntExact(address + count),
+                    value
+                );
+            } catch (ArrayIndexOutOfBoundsException e) {
+                fail("invalid address range: " + address + "+" + count);
+            }
         }
     }
 
@@ -199,36 +231,6 @@ final class HeapMachine implements MachineApi {
             .unsealed(this, console == null ? Consoles.stdout() : console)
             .loadLibrary(LIBRARY_RESOURCE)
             .seal();
-    }
-
-    private void checkOverflow() {
-        if (dataStackTop == dataStack.length) {
-            fail("stack overflow");
-        }
-    }
-
-    private void checkUnderflow() {
-        if (dataStackTop == 0) {
-            fail("stack underflow");
-        }
-    }
-
-    private void checkReturnOverflow() {
-        if (returnStackTop == returnStack.length) {
-            throw new FjorthException("return stack overflow");
-        }
-    }
-
-    private void checkReturnUnderflow() {
-        if (returnStackTop == 0) {
-            fail("return stack underflow");
-        }
-    }
-
-    private int checkAddress(long address) {
-        return address >= 0 && address < memory.length
-            ? (int) address
-            : fail("invalid address: " + address);
     }
 
     private static final int DEFAULT_STACK_SIZE = 1024;

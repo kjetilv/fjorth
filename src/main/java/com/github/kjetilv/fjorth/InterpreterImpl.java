@@ -103,7 +103,12 @@ final class InterpreterImpl implements Interpreter {
     }
 
     void append(Word word) {
-        open().append(word);
+        var open = openDefinition();
+        try {
+            open.append(word);
+        } catch (NullPointerException e) {
+            throw new FjorthException("compilation outside definition");
+        }
     }
 
     void define(Word word) {
@@ -115,15 +120,14 @@ final class InterpreterImpl implements Interpreter {
     }
 
     void makeLatestImmediate() {
-        var latest = dictionary.latest();
-        if (latest == null) {
+        Word latest = dictionary.latest();
+        Word immediate;
+        try {
+            immediate = latest.makeImmediate();
+        } catch (Exception e) {
             throw new FjorthException("IMMEDIATE: empty dictionary");
         }
-        if (latest instanceof Word.Colon(var name, _, var body)) {
-            define(new Word.Colon(name, true, body));
-        } else {
-            throw new FjorthException("IMMEDIATE: not a colon definition: " + latest.name());
-        }
+        define(immediate);
     }
 
     String word(String requester) {
@@ -177,10 +181,7 @@ final class InterpreterImpl implements Interpreter {
         return dictionary;
     }
 
-    Definition open() {
-        if (definition == null) {
-            throw new FjorthException("compilation outside definition");
-        }
+    Definition openDefinition() {
         return definition;
     }
 
