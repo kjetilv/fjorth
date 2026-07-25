@@ -85,17 +85,6 @@ final class HeapMachine implements MachineApi {
     }
 
     @Override
-    public void push(long... values) {
-        try {
-            var len = values.length;
-            System.arraycopy(values, 0, dataStack, dataStackTop, len);
-            dataStackTop += len;
-        } catch (ArrayIndexOutOfBoundsException _) {
-            fail("stack overflow");
-        }
-    }
-
-    @Override
     public void push(long value) {
         try {
             dataStack[dataStackTop++] = value;
@@ -125,17 +114,6 @@ final class HeapMachine implements MachineApi {
     @Override
     public int depth() {
         return dataStackTop;
-    }
-
-    @Override
-    public void pushReturn(long... values) {
-        try {
-            var len = values.length;
-            System.arraycopy(values,  0, returnStack, returnStackTop, len);
-            returnStackTop += len;
-        } catch (ArrayIndexOutOfBoundsException _) {
-            fail("return stack overflow");
-        }
     }
 
     @Override
