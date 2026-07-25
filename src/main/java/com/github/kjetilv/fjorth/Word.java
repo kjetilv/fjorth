@@ -12,7 +12,7 @@ sealed interface Word {
         return new Primitive(name, immediate, effect);
     }
 
-    static Colon colon(String name, boolean immediate, List<Word> body) {
+    static Colon colon(String name, boolean immediate, Word... body) {
         return new Colon(name, immediate, body);
     }
 
@@ -37,15 +37,7 @@ sealed interface Word {
     record Primitive(String name, boolean immediate, Effect effect) implements Word {
     }
 
-    record Colon(String name, boolean immediate, List<Word> body) implements Word {
-
-        public Colon {
-            body = List.copyOf(body);
-        }
-
-        Word asImmediate() {
-            return new Colon(name, true, body);
-        }
+    record Colon(String name, boolean immediate, Word... body) implements Word {
     }
 
     record Literal(long value) implements Word {
@@ -73,6 +65,7 @@ sealed interface Word {
 
     }
 
+    @FunctionalInterface
     interface Effect {
 
         @SuppressWarnings("ClassEscapesDefinedScope")

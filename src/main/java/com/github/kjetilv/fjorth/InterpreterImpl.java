@@ -4,6 +4,7 @@ import module java.base;
 import com.github.kjetilv.fjorth.Interpreter.Result.Failed;
 
 import static com.github.kjetilv.fjorth.Primitives.WORDS;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 
 final class InterpreterImpl implements Interpreter {
 
@@ -65,9 +66,7 @@ final class InterpreterImpl implements Interpreter {
     }
 
     InterpreterImpl loadLibrary(String resource) {
-        if (load(resource) instanceof Result.Failed(var message)) {
-            throw new IllegalStateException("Failed to execute library: " + message);
-        }
+        load(resource);
         return this;
     }
 
@@ -120,10 +119,11 @@ final class InterpreterImpl implements Interpreter {
         if (latest == null) {
             throw new FjorthException("IMMEDIATE: empty dictionary");
         }
-        if (!(latest instanceof Word.Colon colon)) {
+        if (latest instanceof Word.Colon(var name, _, var body)) {
+            define(new Word.Colon(name, true, body));
+        } else {
             throw new FjorthException("IMMEDIATE: not a colon definition: " + latest.name());
         }
-        define(colon.asImmediate());
     }
 
     String word(String requester) {
@@ -161,8 +161,8 @@ final class InterpreterImpl implements Interpreter {
 
     void execute(Word word) {
         switch (word) {
-            case Word.Primitive primitive -> effect(primitive.effect());
-            case Word.Colon colon -> executeAll(colon.body());
+            case Word.Primitive(var _, var _, var effect) -> effect.apply(this);
+            case Word.Colon(var _, var _, var body) -> executeAll(body);
             case Word.Literal(var value) -> machine.push(value);
             case Word.Branch(var target) -> outsideDefinition(target);
             case Word.ZeroBranch(var target) -> outsideDefinition(target);
@@ -203,10 +203,6 @@ final class InterpreterImpl implements Interpreter {
         }
     }
 
-    private void effect(Word.Effect effect) {
-        effect.apply(this);
-    }
-
     private void processTokens() {
         while (true) {
             String token = nextToken();
@@ -223,20 +219,21 @@ final class InterpreterImpl implements Interpreter {
         }
     }
 
-    private Result load(String resource) {
+    private void load(String resource) {
         var stream =
             Thread.currentThread().getContextClassLoader().getResourceAsStream(resource);
         if (stream == null) {
             throw new IllegalStateException("missing library resource: " + resource);
         }
         try (
-            var bufferedReader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))
+            var lines = new BufferedReader(new InputStreamReader(stream, US_ASCII), BUFFER_SIZE)
         ) {
-            return bufferedReader.lines()
-                .map(this::interpret)
-                .filter(Failed.class::isInstance)
-                .findFirst()
-                .orElse(OK);
+            String line;
+            while ((line = lines.readLine()) != null) {
+                if (interpret(line) instanceof Failed(String message)) {
+                    throw new IllegalStateException("Failed to execute library: " + message);
+                }
+            }
         } catch (Exception e) {
             throw new IllegalStateException("failed to read " + resource, e);
         }
@@ -260,10 +257,10 @@ final class InterpreterImpl implements Interpreter {
         }
     }
 
-    private void executeAll(List<Word> body) {
-        var pointer = 0;
-        while (pointer < body.size()) {
-            pointer = switch (body.get(pointer)) {
+    private void executeAll(Word[] body) {
+        for (int pointer = 0; pointer < body.length; ) {
+            pointer =
+                switch (body[pointer]) {
                 case Word.Branch(var nextPointer) -> nextPointer;
                 case Word.ZeroBranch(var nextPointer) -> machine.pop() == 0
                     ? nextPointer
@@ -306,6 +303,8 @@ final class InterpreterImpl implements Interpreter {
     private static final Result.OK OK = new Result.OK();
 
     private static final char[] EMPTY_CHARS = new char[0];
+
+    private static final int BUFFER_SIZE = 32 * 1024;
 
     private static void outsideDefinition(int target) {
         throw new FjorthException("branch outside definition: " + target);

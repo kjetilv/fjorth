@@ -9,11 +9,7 @@ final class Primitives {
     private Primitives() {
     }
 
-    private static final UnaryOp.Identity IDENTITY = new UnaryOp.Identity();
-
-    private static final Noop NOOP = new Noop();
-
-    public static final List<Word> WORDS = List.of(
+    static final Word[] WORDS = new Word[] {
         binary("*", new BinaryOp.Mul()),
         binary("+", new BinaryOp.Add()),
         binary("-", new BinaryOp.Sub()),
@@ -47,8 +43,8 @@ final class Primitives {
         immediate("UNTIL", new Until()),
         immediate("WHILE", new While()),
         immediate("\\", new ReadRestOfLine()),
-        noop("ALIGN"),
-        noop("CELLS+"),
+        primitive("ALIGN", new Noop()),
+        primitive("CELLS+", new Noop()),
         primitive("!", new Store()),
         primitive("+!", new AddStore()),
         primitive(",", new Comma()),
@@ -85,14 +81,10 @@ final class Primitives {
         primitive("VARIABLE", new Variable()),
         primitive("WORDS", new Words()),
         unary("0=", new UnaryOp.Eq0()),
-        unary("ALIGNED", IDENTITY),
-        unary("CELLS", IDENTITY),
+        unary("ALIGNED", new UnaryOp.Identity()),
+        unary("CELLS", new UnaryOp.Identity()),
         unary("INVERT", new UnaryOp.Invert())
-    );
-
-    private static Word noop(String name) {
-        return primitive(name, NOOP);
-    }
+    };
 
     private static String render(Word word) {
         return switch (word) {
@@ -101,18 +93,18 @@ final class Primitives {
         };
     }
 
-    private static String renderColon(String name, boolean immediate, List<Word> body) {
+    private static String renderColon(String name, boolean immediate, Word[] body) {
         var suffix = immediate ? " IMMEDIATE\n" : "\n";
-        if (body.stream().anyMatch(Primitives::isBranch)) {
+        if (Arrays.stream(body).anyMatch(Primitives::isBranch)) {
             var text = new StringBuilder(": ").append(name).append('\n');
-            for (var i = 0; i < body.size(); i++) {
-                text.append(String.format("%4d: %s\n", i, cell(body.get(i))));
+            for (var i = 0; i < body.length; i++) {
+                text.append(String.format("%4d: %s\n", i, cell(body[i])));
             }
             return text.append(';').append(suffix).toString();
         }
-        return body.isEmpty()
+        return body.length == 0
             ? ": " + name + " ;" + suffix
-            : body.stream()
+            : Arrays.stream(body)
                 .map(Primitives::cell)
                 .collect(Collectors.joining(" ", ": " + name + " ", " ;" + suffix));
     }
@@ -458,7 +450,8 @@ final class Primitives {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
-            interpreter.print((char) interpreter.machine().pop());
+            var machine = interpreter.machine();
+            interpreter.print((char) machine.pop());
         }
     }
 
@@ -517,8 +510,8 @@ final class Primitives {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
-            var name = interpreter.word("CONSTANT");
             var machine = interpreter.machine();
+            var name = interpreter.word("CONSTANT");
             var value = machine.pop();
             interpreter.define(Word.primitive(name, new MachinePush(machine, value)));
         }
@@ -529,8 +522,8 @@ final class Primitives {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
-            var name = interpreter.word("VARIABLE");
             var machine = interpreter.machine();
+            var name = interpreter.word("VARIABLE");
             long address = machine.allot(1);
             interpreter.define(Word.primitive(name, new MachinePush(machine, address)));
         }

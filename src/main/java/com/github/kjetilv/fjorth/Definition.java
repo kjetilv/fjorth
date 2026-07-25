@@ -79,9 +79,10 @@ final class Definition {
             throw new FjorthException("unresolved branch in " + name);
         }
         if (tail != null) {
-            body.add(retrofit(Word.colon("(does> " + name + ")", false, tail)));
+            var colon = Word.colon("(does> " + name + ")", false, tail.toArray(Word[]::new));
+            body.add(retrofit(colon));
         }
-        var colon = Word.colon(name, false, body);
+        var colon = Word.colon(name, false, body.toArray(Word[]::new));
         self[0] = colon;
         return colon;
     }

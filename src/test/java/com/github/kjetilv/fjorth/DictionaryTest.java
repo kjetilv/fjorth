@@ -41,14 +41,14 @@ class DictionaryTest {
     @Test
     void compiledReferenceSurvivesRedefinition() {
         var first = primitive("X");
-        Word caller = Word.colon("CALLER", false, List.of(first));
+        Word caller = Word.colon("CALLER", false, first);
         var dictionary = Dictionary.of(first)
             .define(caller)
             .define(primitive("X"));
         var found = dictionary.lookup("CALLER");
         var colon = (Word.Colon) found;
-        assertSame(first, colon.body().getFirst());
-        assertEquals(1, colon.body().size());
+        assertSame(first, colon.body()[0]);
+        assertEquals(1, colon.body().length);
     }
 
     private static Word primitive(String name) {

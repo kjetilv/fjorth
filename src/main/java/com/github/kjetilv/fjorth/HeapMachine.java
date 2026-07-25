@@ -7,9 +7,9 @@ final class HeapMachine implements MachineApi {
 
     public static final int CHAR_MASK = 0xFFFF;
 
-    private final long[] data;
+    private final long[] dataStack;
 
-    private final long[] returns;
+    private final long[] returnStack;
 
     private final long[] memory;
 
@@ -17,9 +17,9 @@ final class HeapMachine implements MachineApi {
 
     private final int baseAddress;
 
-    private int dataTop;
+    private int dataStackTop;
 
-    private int returnsTop;
+    private int returnStackTop;
 
     private int here;
 
@@ -34,8 +34,8 @@ final class HeapMachine implements MachineApi {
     }
 
     HeapMachine(int dataStackSize, int returnStackSize, int memoryCells) {
-        this.data = new long[dataStackSize > 0 ? dataStackSize : DEFAULT_STACK_SIZE];
-        this.returns = new long[returnStackSize > 0 ? returnStackSize : DEFAULT_STACK_SIZE];
+        this.dataStack = new long[dataStackSize > 0 ? dataStackSize : DEFAULT_STACK_SIZE];
+        this.returnStack = new long[returnStackSize > 0 ? returnStackSize : DEFAULT_STACK_SIZE];
         this.memory = new long[memoryCells > 0 ? memoryCells : DEFAULT_MEMORY_CELLS];
         this.baseAddress = allot(1);
         store(baseAddress, 10);
@@ -50,21 +50,21 @@ final class HeapMachine implements MachineApi {
 
     @Override
     public long peek() {
-        return dataTop > 0
-            ? data[dataTop - 1]
+        return dataStackTop > 0
+            ? dataStack[dataStackTop - 1]
             : fail("stack underflow");
     }
 
     @Override
     public long peekReturn() {
-        return returnsTop > 0
-            ? returns[returnsTop - 1]
+        return returnStackTop > 0
+            ? returnStack[returnStackTop - 1]
             : fail("return stack underflow");
     }
 
     @Override
     public long[] stack() {
-        return Arrays.copyOf(data, dataTop);
+        return Arrays.copyOf(dataStack, dataStackTop);
     }
 
     @Override
@@ -83,53 +83,49 @@ final class HeapMachine implements MachineApi {
     @Override
     public void push(long value) {
         checkOverflow();
-        data[dataTop] = value;
-        dataTop++;
+        dataStack[dataStackTop++] = value;
     }
 
     @Override
     public long pop() {
         checkUnderflow();
-        dataTop--;
-        return data[dataTop];
+        return dataStack[--dataStackTop];
     }
 
     @Override
     public long peek(int offset) {
-        return dataTop > offset
-            ? data[dataTop - 1 - offset]
+        return dataStackTop > offset
+            ? dataStack[dataStackTop - 1 - offset]
             : fail("stack underflow");
     }
 
     @Override
     public int depth() {
-        return dataTop;
+        return dataStackTop;
     }
 
     @Override
     public void pushReturn(long value) {
         checkReturnOverflow();
-        returns[returnsTop] = value;
-        returnsTop++;
+        returnStack[returnStackTop++] = value;
     }
 
     @Override
     public long popReturn() {
         checkReturnUnderflow();
-        returnsTop--;
-        return returns[returnsTop];
+        return returnStack[--returnStackTop];
     }
 
     @Override
     public long peekReturn(int offset) {
-        return returnsTop > offset
-            ? returns[returnsTop - 1 - offset]
+        return returnStackTop > offset
+            ? returnStack[returnStackTop - 1 - offset]
             : fail("return stack underflow");
     }
 
     @Override
     public int returnDepth() {
-        return returnsTop;
+        return returnStackTop;
     }
 
     @Override
@@ -163,9 +159,12 @@ final class HeapMachine implements MachineApi {
     @Override
     public void store(long address, long count, long value) {
         if (count > 0) {
-            var addr = checkAddress(address);
-            var toAddr = checkAddress(address + count);
-            Arrays.fill(memory, addr, toAddr, value);
+            Arrays.fill(
+                memory,
+                checkAddress(address),
+                checkAddress(address + count),
+                value
+            );
         }
     }
 
@@ -181,8 +180,8 @@ final class HeapMachine implements MachineApi {
 
     @Override
     public void reset() {
-        dataTop = 0;
-        returnsTop = 0;
+        dataStackTop = 0;
+        returnStackTop = 0;
         here = 1;
         compiling = false;
     }
@@ -203,25 +202,25 @@ final class HeapMachine implements MachineApi {
     }
 
     private void checkOverflow() {
-        if (dataTop == data.length) {
+        if (dataStackTop == dataStack.length) {
             fail("stack overflow");
         }
     }
 
     private void checkUnderflow() {
-        if (dataTop == 0) {
+        if (dataStackTop == 0) {
             fail("stack underflow");
         }
     }
 
     private void checkReturnOverflow() {
-        if (returnsTop == returns.length) {
+        if (returnStackTop == returnStack.length) {
             throw new FjorthException("return stack overflow");
         }
     }
 
     private void checkReturnUnderflow() {
-        if (returnsTop == 0) {
+        if (returnStackTop == 0) {
             fail("return stack underflow");
         }
     }

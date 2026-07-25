@@ -13,8 +13,8 @@ final class Dictionary {
     }
 
     @SuppressWarnings("SameParameterValue")
-    static Dictionary unsealed(List<Word> words) {
-        if (Objects.requireNonNull(words, "words").isEmpty()) {
+    static Dictionary unsealed(Word... words) {
+        if (words.length == 0) {
             throw new IllegalStateException("Empty list");
         }
         return new Dictionary(null, null, words);
@@ -28,7 +28,7 @@ final class Dictionary {
 
     private final String wordLc;
 
-    private Dictionary(Dictionary parent, Word word, List<Word> words) {
+    private Dictionary(Dictionary parent, Word word, Word[] words) {
         var map = words == null
             ? null
             : toMap(words);
@@ -51,16 +51,10 @@ final class Dictionary {
     }
 
     public void insert(Word word) {
-        if (this.words == null) {
-            throw new IllegalArgumentException(this + " cannot define in place: " + word);
-        }
         words.put(lc(word.name()), word);
     }
 
     Dictionary define(Word word) {
-        if (word == null) {
-            throw new IllegalArgumentException("null word");
-        }
         return new Dictionary(this, word, null);
     }
 
@@ -104,16 +98,12 @@ final class Dictionary {
                 : null;
     }
 
-    private static Map<String, Word> toMap(List<Word> words) {
-        return words.stream()
-            .collect(Collectors.toMap(
-                w -> lc(w.name()),
-                Function.identity(),
-                (w1, w2) -> {
-                    throw new IllegalStateException(w1 + " / " + w2);
-                },
-                LinkedHashMap::new
-            ));
+    private static Map<String, Word> toMap(Word[] words) {
+        Map<String, Word> map = LinkedHashMap.newLinkedHashMap(words.length * 2);
+        for (Word word : words) {
+            map.put(lc(word.name()), word);
+        }
+        return map;
     }
 
     private static String lc(String name) {
