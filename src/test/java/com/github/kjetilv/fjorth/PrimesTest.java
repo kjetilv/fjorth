@@ -1,7 +1,6 @@
 package com.github.kjetilv.fjorth;
 
 import module java.base;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
