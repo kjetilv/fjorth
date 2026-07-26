@@ -9,7 +9,7 @@ public class FibTest extends InterpreterTestCase {
 
     @Test
     void fibonacci() {
-        interpretResource("fib.fs");
+        loadResource("fib.fs");
         interpret("main");
         assertEquals("9227465", output().trim());
     }

@@ -4,7 +4,13 @@ public interface Interpreter {
 
     Result interpret(String line);
 
+    void interpretInteractively(String line);
+
+    Loader loader();
+
     sealed interface Result {
+
+        Result OK = new OK();
 
         record OK() implements Result {
         }

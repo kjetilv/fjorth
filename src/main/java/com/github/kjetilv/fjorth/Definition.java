@@ -69,10 +69,7 @@ final class Definition {
     }
 
     Word recurse() {
-        return Word.primitive(
-            "(recurse)",
-            interpreter -> interpreter.execute(self[0])
-        );
+        return Word.primitive("(recurse)", new Recurse());
     }
 
     Word.Colon seal() {
@@ -107,25 +104,7 @@ final class Definition {
     }
 
     private static Word retrofit(Word.Colon tailColon) {
-        return Word.primitive(
-            "(does>)",
-            interpreter -> {
-                Word latest = interpreter.dictionary().latest();
-                String name;
-                try {
-                    name = latest.name();
-                } catch (NullPointerException e) {
-                    throw new FjorthException("DOES>: empty dictionary");
-                }
-                interpreter.define(Word.primitive(
-                    name,
-                    _ -> {
-                        interpreter.execute(latest);
-                        interpreter.execute(tailColon);
-                    }
-                ));
-            }
-        );
+        return Word.primitive("(does>)", new Retrofit(tailColon));
     }
 
     private static boolean unresolved(Iterable<Word> words) {
@@ -143,5 +122,52 @@ final class Definition {
             case Word.ZeroBranch(var target) -> target < 0;
             default -> false;
         };
+    }
+
+    private final class Recurse implements Word.Effect {
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            interpreter.execute(self[0]);
+        }
+    }
+
+    private static final class Retrofit implements Word.Effect {
+
+        private final Word.Colon tailColon;
+
+        private Retrofit(Word.Colon tailColon) {
+            this.tailColon = tailColon;
+        }
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            Word latest = interpreter.dictionary().latest();
+            String name;
+            try {
+                name = latest.name();
+            } catch (NullPointerException e) {
+                throw new FjorthException("DOES>: empty dictionary");
+            }
+            interpreter.define(Word.primitive(
+                name,
+                new Does(latest)
+            ));
+        }
+
+        private final class Does implements Word.Effect {
+
+            private final Word latest;
+
+            private Does(Word latest) {
+                this.latest = latest;
+            }
+
+            @Override
+            public void apply(InterpreterImpl interpreter) {
+                interpreter.execute(latest);
+                interpreter.execute(tailColon);
+            }
+        }
     }
 }

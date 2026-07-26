@@ -2,6 +2,8 @@ package com.github.kjetilv.fjorth;
 
 import module java.base;
 
+import static com.github.kjetilv.fjorth.Word.*;
+
 final class Dictionary {
 
     public static Dictionary of(Word word) {
@@ -32,9 +34,13 @@ final class Dictionary {
         var map = words == null
             ? null
             : toMap(words);
-        var wordLc = word instanceof Word.Primitive(var name, var _, var _) ? lc(name)
-            : word instanceof Word.Colon(var name, var _, var _) ? lc(name)
-                : null;
+        String wordLc = switch (word) {
+            case Primitive(var name, var _, var _) -> lc(name);
+            case Value(var name, var _) -> lc(name);
+            case Colon (var name, var _, var _) -> lc(name);
+            case Branch _, Literal _, ZeroBranch _ -> null;
+            case null -> null;
+        };
         this(parent, map, word, wordLc);
     }
 

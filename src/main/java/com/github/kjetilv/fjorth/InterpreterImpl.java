@@ -4,9 +4,8 @@ import module java.base;
 import com.github.kjetilv.fjorth.Interpreter.Result.Failed;
 
 import static com.github.kjetilv.fjorth.Primitives.WORDS;
-import static java.nio.charset.StandardCharsets.US_ASCII;
 
-final class InterpreterImpl implements Interpreter {
+final class InterpreterImpl implements Interpreter, Loader {
 
     static InterpreterImpl unsealed(MachineApi machine, Console console) {
         return new InterpreterImpl(
@@ -55,18 +54,100 @@ final class InterpreterImpl implements Interpreter {
             } finally {
                 console.flush();
             }
-            return OK;
+            return Result.OK;
         } catch (FjorthException e) {
             try {
-                return new Failed(e.getMessage());
+                return new Failed(e.multiLineMessage());
             } finally {
                 reset();
             }
         }
     }
 
+    @Override
+    public void interpretInteractively(String line) {
+        switch (interpret(line)) {
+            case Result.OK _ -> console.println(" ok");
+            case Failed(var message) -> {
+                console.println();
+                console.println(message);
+            }
+        }
+    }
+
+    @Override
+    public Loader loader() {
+        return this;
+    }
+
+    @Override
+    public Result load(Reader reader) {
+        try (var lines = new BufferedReader(reader)) {
+            String line;
+            while ((line = lines.readLine()) != null) {
+                var result = interpret(line);
+                if (result instanceof Failed failed) {
+                    return failed;
+                }
+            }
+            return Result.OK;
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to read " + reader, e);
+        }
+    }
+
+    public void openDefinitionBeginLoop() {
+        try {
+            definition.beginLoop();
+        } catch (NullPointerException e) {
+            throw new FjorthException("compilation outside definition");
+        }
+    }
+
+    public void openDefinitionRecurse() {
+        Word recurse;
+        try {
+            recurse = definition.recurse();
+        } catch (NullPointerException e) {
+            throw new FjorthException("compilation outside definition");
+        }
+        append(recurse);
+    }
+
+    public void openDefinitionEndLoop() {
+        try {
+            definition.endLoop();
+        } catch (FjorthException e) {
+            e.fillInStackTrace();
+            throw e;
+        } catch (NullPointerException e) {
+            throw new FjorthException("compilation outside definition");
+        }
+    }
+
+    public void openDefinitionCloseLoop() {
+        try {
+            definition.closeLoop();
+        } catch (NullPointerException e) {
+            throw new FjorthException("compilation outside definition");
+        }
+    }
+
+    public void openDefinitionBeginTail() {
+        try {
+            definition.beginTail();
+        } catch (NullPointerException e) {
+            throw new FjorthException("compilation outside definition");
+        } catch (FjorthException e) {
+            e.fillInStackTrace();
+            throw e;
+        }
+    }
+
     InterpreterImpl loadLibrary(String resource) {
-        load(resource);
+        if (load(resource) instanceof Failed(var message)) {
+            throw new IllegalStateException("Failed to load library: " + message);
+        }
         return this;
     }
 
@@ -103,9 +184,8 @@ final class InterpreterImpl implements Interpreter {
     }
 
     void append(Word word) {
-        var open = openDefinition();
         try {
-            open.append(word);
+            definition.append(word);
         } catch (NullPointerException e) {
             throw new FjorthException("compilation outside definition");
         }
@@ -124,7 +204,10 @@ final class InterpreterImpl implements Interpreter {
         Word immediate;
         try {
             immediate = latest.makeImmediate();
-        } catch (Exception e) {
+        } catch (FjorthException e) {
+            e.fillInStackTrace();
+            throw e;
+        } catch (NullPointerException e) {
             throw new FjorthException("IMMEDIATE: empty dictionary");
         }
         define(immediate);
@@ -144,6 +227,10 @@ final class InterpreterImpl implements Interpreter {
 
     void print(char c) {
         console.print(c);
+    }
+
+    String readString() {
+        return readUntil('"');
     }
 
     String readUntil(char delimiter) {
@@ -166,6 +253,7 @@ final class InterpreterImpl implements Interpreter {
     void execute(Word word) {
         switch (word) {
             case Word.Primitive(var _, var _, var effect) -> effect.apply(this);
+            case Word.Value(var _, var effect) -> effect.apply(this);
             case Word.Colon(var _, var _, var body) -> executeAll(body);
             case Word.Literal(var value) -> machine.push(value);
             case Word.Branch(var target) -> outsideDefinition(target);
@@ -183,6 +271,14 @@ final class InterpreterImpl implements Interpreter {
 
     Definition openDefinition() {
         return definition;
+    }
+
+    int openDefinitionSize() {
+        try {
+            return definition.size();
+        } catch (NullPointerException e) {
+            throw new FjorthException("compilation outside definition");
+        }
     }
 
     Interpreter seal() {
@@ -217,26 +313,6 @@ final class InterpreterImpl implements Interpreter {
             } catch (Exception e) {
                 throw new IllegalStateException("Failed to process tokens", e);
             }
-        }
-    }
-
-    private void load(String resource) {
-        var stream =
-            Thread.currentThread().getContextClassLoader().getResourceAsStream(resource);
-        if (stream == null) {
-            throw new IllegalStateException("missing library resource: " + resource);
-        }
-        try (
-            var lines = new BufferedReader(new InputStreamReader(stream, US_ASCII), BUFFER_SIZE)
-        ) {
-            String line;
-            while ((line = lines.readLine()) != null) {
-                if (interpret(line) instanceof Failed(String message)) {
-                    throw new IllegalStateException("Failed to execute library: " + message);
-                }
-            }
-        } catch (Exception e) {
-            throw new IllegalStateException("failed to read " + resource, e);
         }
     }
 
@@ -300,11 +376,7 @@ final class InterpreterImpl implements Interpreter {
         }
     }
 
-    private static final Result.OK OK = new Result.OK();
-
     private static final char[] EMPTY_CHARS = new char[0];
-
-    private static final int BUFFER_SIZE = 32 * 1024;
 
     private static void outsideDefinition(int target) {
         throw new FjorthException("branch outside definition: " + target);

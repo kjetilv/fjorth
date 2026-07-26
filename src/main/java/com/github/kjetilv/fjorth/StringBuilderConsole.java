@@ -21,6 +21,12 @@ final class StringBuilderConsole implements Console {
     }
 
     @Override
+    public void println() {
+        builder.append("\n");
+        flush();
+    }
+
+    @Override
     public void print(String string) {
         builder.append(string);
     }

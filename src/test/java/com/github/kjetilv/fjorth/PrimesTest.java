@@ -4,12 +4,14 @@ import module java.base;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-public class PrimesTest extends InterpreterTestCase{
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+public class PrimesTest extends InterpreterTestCase {
 
     @Test
     void primes() {
-        interpretResource("sieve.fs");
+        loadResource("sieve.fs");
         interpret("main");
-        Assertions.assertEquals("1899", output().trim());
+        assertEquals("1899", output().trim());
     }
 }

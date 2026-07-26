@@ -1,96 +1,51 @@
-import com.github.kjetilv.fjorth.Console;
-import com.github.kjetilv.fjorth.Consoles;
-import com.github.kjetilv.fjorth.Interpreter;
+import com.github.kjetilv.fjorth.*;
 import com.github.kjetilv.fjorth.Interpreter.Result.Failed;
-import com.github.kjetilv.fjorth.Interpreter.Result.OK;
-import com.github.kjetilv.fjorth.Machine;
 
 ///  Salty Fjorð!
-void main(String[] args) {
-    if (args.length == 0) {
-        evaluateStdin();
-    } else {
-        evaluateArgumentFules(args);
-    }
-}
-
-private void evaluateStdin() {
-    CONSOLE.println("fjorth");
-    try (var in = stdin()) {
-        in.lines()
-            .forEach(this::evaluate);
-    } catch (Exception e) {
-        throw new IllegalStateException("Run failed", e);
-    }
-}
-
-private void evaluateArgumentFules(String[] args) {
-    Arrays.stream(args)
-        .peek(arg -> CONSOLE.println("*** evaluating file " + arg))
-        .map(Path::of)
-        .forEach(file ->
-            evaluateLines(file, () -> reader(file))
-                .ifPresent(failingLine -> {
-                    throw new IllegalStateException("Failed to evaluate " + file + ", failing line: " + failingLine);
-                }));
-}
-
-/// @param source         Source of lines
-/// @param readerSupplier Supplier of reader
-/// @return Error message for first line that failed, empty if all succeeded
-private Optional<String> evaluateLines(
-    Object source,
-    Supplier<BufferedReader> readerSupplier
-) {
-    try (var in = readerSupplier.get()) {
-        int[] ln = {1};
-        return in.lines()
-            .flatMap(line -> {
-                try {
-                    return error(source, line, ln);
-                } finally {
-                    ln[0]++;
-                }
-            })
-            .findFirst();
-    } catch (Exception e) {
-        throw new IllegalStateException("Failed to read from " + source, e);
-    }
-}
-
-private Stream<String> error(Object source, String line, int[] ln) {
-    return evaluate(line)
-        ? Stream.empty()
-        : Stream.of(source + ":" + ln[0] + " >> " + line);
-}
-
 @SuppressWarnings("MethodMayBeStatic")
-private boolean evaluate(String line) {
-    return switch (INTERPRETER.interpret(line)) {
-        case OK _ -> {
-            CONSOLE.println(" ok");
-            yield true;
+void main(String[] args) {
+    if (args.length != 0) {
+        var result = evaluateArgumentFiles(args);
+        if (result instanceof Failed(var message)) {
+            CONSOLE.println("Terminating: " + message);
+            return;
         }
-        case Failed(var message) -> {
-            CONSOLE.println();
-            CONSOLE.println(message);
-            yield false;
-        }
-    };
+    }
+    evaluateStdin();
 }
 
 private static final Console CONSOLE = Consoles.stdout();
 
 private static final Interpreter INTERPRETER = Machine.create().interpreter(CONSOLE);
 
-private static BufferedReader stdin() {
-    return new BufferedReader(new InputStreamReader(System.in));
+private static final Loader LOADER = INTERPRETER.loader();
+
+private static Interpreter.Result evaluateArgumentFiles(String[] args) {
+    for (String arg : args) {
+        var path = Path.of(arg);
+        if (Files.isRegularFile(path)) {
+            var result = LOADER.load(path);
+            if (result instanceof Failed(var message)) {
+                CONSOLE.println("Failed compilation of " + arg + "\n  " + message);
+                return result;
+            }
+        } else {
+            throw new IllegalArgumentException("Not a valid file: " + arg);
+        }
+    }
+    return Interpreter.Result.OK;
 }
 
-private static BufferedReader reader(Path file) {
+private static void evaluateStdin() {
+    CONSOLE.println("fjorth");
     try {
-        return Files.newBufferedReader(file);
+        try (
+            var stdinReader = new BufferedReader(new InputStreamReader(System.in));
+            var lines = stdinReader.lines()
+        ) {
+            lines.forEach(INTERPRETER::interpretInteractively);
+        }
     } catch (Exception e) {
-        throw new IllegalStateException("Could not read from " + file, e);
+        throw new IllegalStateException("Run failed", e);
     }
 }

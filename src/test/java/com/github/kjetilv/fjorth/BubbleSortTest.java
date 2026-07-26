@@ -10,7 +10,7 @@ public class BubbleSortTest extends InterpreterTestCase {
     @Disabled
     @Test
     void sort() {
-        interpretResource("bubble-sort.fs");
+        loadResource("bubble-sort.fs");
         interpret("main");
         Assertions.assertEquals("9227465", output().trim());
     }

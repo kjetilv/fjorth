@@ -4,12 +4,24 @@ import module java.base;
 
 sealed interface Word {
 
+    static Primitive primitive(String name, Runnable runnable) {
+        return primitive(name, effect(runnable));
+    }
+
     static Primitive primitive(String name, Effect effect) {
         return primitive(name, false, effect);
     }
 
     static Primitive primitive(String name, boolean immediate, Effect effect) {
         return new Primitive(name, immediate, effect);
+    }
+
+    static Value value(String name, Runnable runnable) {
+        return value(name, effect(runnable));
+    }
+
+    static Value value(String name, Effect effect) {
+        return new Value(name, effect);
     }
 
     static Colon colon(String name, Word... body) {
@@ -32,10 +44,17 @@ sealed interface Word {
         return false;
     }
 
-    String name();
-
     default Word makeImmediate() {
         throw new FjorthException("IMMEDIATE: not a colon definition: " + name());
+    }
+
+    String name();
+
+    private static Effect effect(Runnable effect) {
+        return new RunEffect(effect);
+    }
+
+    record Value(String name, Effect effect) implements Word {
     }
 
     record Primitive(String name, boolean immediate, Effect effect) implements Word {

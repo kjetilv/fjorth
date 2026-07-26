@@ -4,6 +4,7 @@ import module java.base;
 
 import static com.github.kjetilv.fjorth.Word.*;
 
+@SuppressWarnings("DuplicatedCode")
 final class Primitives {
 
     private Primitives() {
@@ -21,6 +22,8 @@ final class Primitives {
         binary("MOD", new BinaryOp.Mod()),
         binary("OR", new BinaryOp.Or()),
         binary("XOR", new BinaryOp.Xor()),
+        binary("LSHIFT", new BinaryOp.LSh()),
+        binary("RSHIFT", new BinaryOp.RSh()),
         immediate("(", new ReadToRightPar()),
         immediate("+LOOP", new PlusLoop()),
         immediate(".\"", new DotQuote()),
@@ -40,6 +43,7 @@ final class Primitives {
         immediate("REPEAT", new Repeat()),
         immediate("S\"", new SQuote()),
         immediate("THEN", new Then()),
+        immediate("TO", new To()),
         immediate("UNTIL", new Until()),
         immediate("WHILE", new While()),
         immediate("\\", new ReadRestOfLine()),
@@ -78,6 +82,7 @@ final class Primitives {
         primitive("SEE", new See()),
         primitive("SWAP", new Swap()),
         primitive("TYPE", new Type()),
+        primitive("VALUE", new Value()),
         primitive("VARIABLE", new Variable()),
         primitive("WORDS", new Words()),
         unary("0=", new UnaryOp.Eq0()),
@@ -150,23 +155,19 @@ final class Primitives {
     }
 
     private static void closeLoop(InterpreterImpl interpreter, Word runtime) {
-        var open = interpreter.openDefinition();
-        try {
-            open.endLoop();
-        } catch (FjorthException e) {
-            e.fillInStackTrace();
-            throw e;
-        } catch (NullPointerException e) {
-            throw new FjorthException("compilation outside definition");
-        }
+        interpreter.openDefinitionEndLoop();
         var dest = interpreter.machine().ipop();
         interpreter.append(runtime);
         interpreter.append(zeroBranch(dest));
-        open.closeLoop();
+        interpreter.openDefinitionCloseLoop();
     }
 
     private static Word primitive(String name, Effect effect) {
-        return Word.primitive(name, false, effect);
+        return Word.primitive(name, effect);
+    }
+
+    private static Word primitive(String name, Runnable effect) {
+        return Word.primitive(name, effect);
     }
 
     private static Word immediate(String name, Effect effect) {
@@ -286,7 +287,7 @@ final class Primitives {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
-            var text = interpreter.readUntil('"');
+            var text = interpreter.readString();
             var machine = interpreter.machine();
             var address = machine.allot(text.length());
             for (var i = 0; i < text.length(); i++) {
@@ -396,6 +397,20 @@ final class Primitives {
             @Override
             public long applyAsLong(long a, long b) {
                 return flag(a > b);
+            }
+        }
+
+        private record LSh() implements LongBinaryOperator {
+            @Override
+            public long applyAsLong(long x, long a) {
+                return x << a;
+            }
+        }
+
+        private record RSh() implements LongBinaryOperator {
+            @Override
+            public long applyAsLong(long x, long a) {
+                return x >> a;
             }
         }
 
@@ -520,7 +535,6 @@ final class Primitives {
             var value = machine.pop();
             interpreter.define(Word.primitive(name, new MachinePush(machine, value)));
         }
-
     }
 
     private record Variable() implements Effect {
@@ -538,7 +552,7 @@ final class Primitives {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
-            var text = interpreter.readUntil('"');
+            var text = interpreter.readString();
             if (interpreter.machine().compiling()) {
                 interpreter.append(Word.primitive("(.\")", new Print(text)));
             } else {
@@ -739,15 +753,9 @@ final class Primitives {
         public void apply(InterpreterImpl interpreter) {
             var machine = interpreter.machine();
             interpreter.append(primitive("(do)", new InnerDo(machine)));
-            var open = interpreter.openDefinition();
-            try {
-                open.beginLoop();
-            } catch (NullPointerException e) {
-                throw new FjorthException("compilation outside definition");
-            }
-            interpreter.machine().push(open.size());
+            interpreter.openDefinitionBeginLoop();
+            interpreter.machine().push(interpreter.openDefinitionSize());
         }
-
     }
 
     private record QDo() implements Effect {
@@ -756,17 +764,11 @@ final class Primitives {
         public void apply(InterpreterImpl interpreter) {
             var machine = interpreter.machine();
             interpreter.append(primitive("(?do)", new InnerDo(machine)));
-            var open = interpreter.openDefinition();
-            try {
-                open.beginLoop();
-            } catch (NullPointerException e) {
-                throw new FjorthException("compilation outside definition");
-
-            }
-            var skip = open.size();
+            interpreter.openDefinitionBeginLoop();
+            var skip = interpreter.openDefinitionSize();
             interpreter.append(zeroBranch(-1));
-            open.addLeave(skip);
-            interpreter.machine().push(open.size());
+            interpreter.openDefinition().addLeave(skip);
+            interpreter.machine().push(skip + 1);
         }
 
         private record InnerDo(MachineApi machine) implements Effect {
@@ -803,15 +805,7 @@ final class Primitives {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
-            var open = interpreter.openDefinition();
-            try {
-                open.beginTail();
-            } catch (NullPointerException e) {
-                throw new FjorthException("compilation outside definition");
-            } catch (FjorthException e) {
-                e.fillInStackTrace();
-                throw e;
-            }
+            interpreter.openDefinitionBeginTail();
         }
     }
 
@@ -819,13 +813,7 @@ final class Primitives {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
-            var open = interpreter.openDefinition();
-            int at;
-            try {
-                at = open.size();
-            } catch (NullPointerException e) {
-                throw new FjorthException("compilation outside definition");
-            }
+            int at = interpreter.openDefinitionSize();
             interpreter.append(zeroBranch(-1));
             interpreter.machine().push(at);
         }
@@ -837,15 +825,9 @@ final class Primitives {
         public void apply(InterpreterImpl interpreter) {
             var machine = interpreter.machine();
             var ifAt = machine.ipop();
-            var open = interpreter.openDefinition();
-            int elseAt;
-            try {
-                elseAt = open.size();
-            } catch (NullPointerException e) {
-                throw new FjorthException("compilation outside definition");
-            }
+            int elseAt = interpreter.openDefinitionSize();
             interpreter.append(branch(-1));
-            open.resolve(ifAt, open.size());
+            interpreter.openDefinition().resolve(ifAt, elseAt + 1);
             machine.push(elseAt);
         }
     }
@@ -855,14 +837,8 @@ final class Primitives {
         @Override
         public void apply(InterpreterImpl interpreter) {
             var at = interpreter.machine().ipop();
-            var open = interpreter.openDefinition();
-            int size;
-            try {
-                size = open.size();
-            } catch (NullPointerException e) {
-                throw new FjorthException("compilation outside definition");
-            }
-            open.resolve(at, size);
+            int size = interpreter.openDefinitionSize();
+            interpreter.openDefinition().resolve(at, size);
         }
     }
 
@@ -870,13 +846,7 @@ final class Primitives {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
-            var open = interpreter.openDefinition();
-            int size;
-            try {
-                size = open.size();
-            } catch (NullPointerException e) {
-                throw new FjorthException("compilation outside definition");
-            }
+            int size = interpreter.openDefinitionSize();
             interpreter.machine().push(size);
         }
     }
@@ -893,13 +863,7 @@ final class Primitives {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
-            var open = interpreter.openDefinition();
-            int at;
-            try {
-                at = open.size();
-            } catch (NullPointerException e) {
-                throw new FjorthException("compilation outside definition");
-            }
+            int at = interpreter.openDefinitionSize();
             interpreter.append(zeroBranch(-1));
             interpreter.machine().push(at);
         }
@@ -913,14 +877,8 @@ final class Primitives {
             var whileAt = machine.ipop();
             var dest = machine.ipop();
             interpreter.append(branch(dest));
-            var open = interpreter.openDefinition();
-            int size;
-            try {
-                size = open.size();
-            } catch (NullPointerException e) {
-                throw new FjorthException("compilation outside definition");
-            }
-            open.resolve(whileAt, size);
+            int size = interpreter.openDefinitionSize();
+            interpreter.openDefinition().resolve(whileAt, size);
         }
     }
 
@@ -930,21 +888,15 @@ final class Primitives {
         public void apply(InterpreterImpl interpreter) {
             var machine = interpreter.machine();
             interpreter.append(primitive("(unloop)", new PopReturn2(machine)));
-            var open = interpreter.openDefinition();
-            int at;
-            try {
-                at = open.size();
-            } catch (NullPointerException e) {
-                throw new FjorthException("compilation outside definition");
-            }
+            int at = interpreter.openDefinitionSize();
             interpreter.append(branch(-1));
-            open.addLeave(at);
+            interpreter.openDefinition().addLeave(at);
         }
 
         private record PopReturn2(MachineApi machine) implements Effect {
 
             @Override
-            public void apply(InterpreterImpl i) {
+            public void apply(InterpreterImpl interpreter) {
                 machine.popReturn();
                 machine.popReturn();
             }
@@ -955,14 +907,7 @@ final class Primitives {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
-            var open = interpreter.openDefinition();
-            Word recurse;
-            try {
-                recurse = open.recurse();
-            } catch (NullPointerException e) {
-                throw new FjorthException("compilation outside definition");
-            }
-            interpreter.append(recurse);
+            interpreter.openDefinitionRecurse();
         }
     }
 
@@ -1021,7 +966,7 @@ final class Primitives {
 
         @Override
         public void apply(InterpreterImpl interpreter) {
-            var text = interpreter.readUntil('"');
+            var text = interpreter.readString();
             var machine = interpreter.machine();
             if (machine.compiling()) {
                 interpreter.append(Word.primitive("(.\")", new Print(text)));
@@ -1045,7 +990,7 @@ final class Primitives {
     private record MachinePush(MachineApi machine, long value) implements Effect {
 
         @Override
-        public void apply(InterpreterImpl i) {
+        public void apply(InterpreterImpl interpreter) {
             machine.push(value);
         }
     }
@@ -1053,7 +998,7 @@ final class Primitives {
     private record InnerDo(MachineApi machine) implements Effect {
 
         @Override
-        public void apply(InterpreterImpl i) {
+        public void apply(InterpreterImpl interpreter) {
             var index = machine.pop();
             var limit = machine.pop();
             machine.pushReturn(limit);
@@ -1064,8 +1009,8 @@ final class Primitives {
     private record Print(String text) implements Effect {
 
         @Override
-        public void apply(InterpreterImpl i) {
-            i.print(text);
+        public void apply(InterpreterImpl interpreter) {
+            interpreter.print(text);
         }
     }
 
@@ -1074,6 +1019,48 @@ final class Primitives {
         @Override
         public void apply(InterpreterImpl interpreter) {
             interpreter.makeLatestImmediate();
+        }
+    }
+
+    private static class Value implements Effect {
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            var machine = interpreter.machine();
+            var a = machine.pop();
+            var name = interpreter.readString();
+            interpreter.define(
+                value(
+                    name,
+                    () -> machine.push(a)
+                ));
+        }
+    }
+
+    private static class To implements Effect {
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            var machine = interpreter.machine();
+            if (machine.compiling()) {
+                interpreter.append(primitive("(value)", new To()));
+                var name = interpreter.word("TO");
+                interpreter.append(primitive(
+                    name, () -> {
+                    }
+                ));
+            } else {
+                var a = machine.pop();
+                var name = interpreter.word("TO");
+                Word word = interpreter.dictionary().lookup(name);
+                if (word == null) {
+                    throw new FjorthException(name + " ?");
+                }
+                if (!(word instanceof Word.Value)) {
+                    throw new FjorthException(name + " ?");
+                }
+                interpreter.define(value(name, () -> machine.push(a)));
+            }
         }
     }
 }

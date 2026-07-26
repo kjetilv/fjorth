@@ -3,7 +3,6 @@ package com.github.kjetilv.fjorth;
 import module java.base;
 import org.junit.jupiter.api.BeforeEach;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
@@ -31,24 +30,10 @@ public class InterpreterTestCase {
         return output.toString();
     }
 
-    static void interpretResource(String resource) {
-        Optional.ofNullable(Thread.currentThread().getContextClassLoader().getResourceAsStream(resource))
-            .ifPresentOrElse(
-                inputStream -> {
-                    try (
-                        var bufferedReader = new BufferedReader(new InputStreamReader(inputStream, UTF_8))
-                    ) {
-                        bufferedReader.lines()
-                            .filter(line -> !line.isBlank())
-                            .forEach(InterpreterTestCase::interpret);
-                    } catch (Exception e) {
-                        throw new IllegalStateException("Failed to load " + resource, e);
-                    }
-                },
-                () -> {
-                    throw new IllegalStateException("No such resource: " + resource);
-                }
-            );
+    static void loadResource(String resource) {
+        if (loader.load(resource) instanceof Interpreter.Result.Failed(var message)) {
+            throw new IllegalArgumentException("Invalid resource " + resource + ": " + message);
+        }
     }
 
     static void interpret(String line) {
@@ -88,6 +73,8 @@ public class InterpreterTestCase {
         machine.interpreter(Consoles.to(output));
 
     static final Dictionary baseDictionary = interpreter.dictionary();
+
+    static final Loader loader = interpreter.loader();
 
     static final Console console = Consoles.to(output);
 }
