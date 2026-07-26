@@ -43,11 +43,11 @@ final class Primitives {
         immediate("REPEAT", new Repeat()),
         immediate("S\"", new SQuote()),
         immediate("THEN", new Then()),
-        immediate("TO", new To()),
         immediate("UNTIL", new Until()),
         immediate("WHILE", new While()),
         immediate("\\", new ReadRestOfLine()),
         primitive("ALIGN", new Noop()),
+        primitive("BL", new Bl()),
         primitive("CELLS+", new Noop()),
         primitive("!", new Store()),
         primitive("+!", new AddStore()),
@@ -80,7 +80,9 @@ final class Primitives {
         primitive("R@", new PeekReturn()),
         primitive("ROT", new Rot()),
         primitive("SEE", new See()),
+        primitive("STATE", new State()),
         primitive("SWAP", new Swap()),
+        primitive("TO", new To()),
         primitive("TYPE", new Type()),
         primitive("VALUE", new Value()),
         primitive("VARIABLE", new Variable()),
@@ -1061,6 +1063,23 @@ final class Primitives {
                 }
                 interpreter.define(value(name, () -> machine.push(a)));
             }
+        }
+    }
+
+    private static class Bl implements Effect {
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            interpreter.machine().push(' ');
+        }
+    }
+
+    private static class State implements Effect {
+
+        @Override
+        public void apply(InterpreterImpl interpreter) {
+            var machine = interpreter.machine();
+            machine.push(machine.compiling());
         }
     }
 }

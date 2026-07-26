@@ -96,7 +96,7 @@ final class InterpreterImpl implements Interpreter, Loader {
         }
     }
 
-    public void openDefinitionBeginLoop() {
+    void openDefinitionBeginLoop() {
         try {
             definition.beginLoop();
         } catch (NullPointerException e) {
@@ -104,7 +104,7 @@ final class InterpreterImpl implements Interpreter, Loader {
         }
     }
 
-    public void openDefinitionRecurse() {
+    void openDefinitionRecurse() {
         Word recurse;
         try {
             recurse = definition.recurse();
@@ -114,7 +114,7 @@ final class InterpreterImpl implements Interpreter, Loader {
         append(recurse);
     }
 
-    public void openDefinitionEndLoop() {
+    void openDefinitionEndLoop() {
         try {
             definition.endLoop();
         } catch (FjorthException e) {
@@ -125,7 +125,7 @@ final class InterpreterImpl implements Interpreter, Loader {
         }
     }
 
-    public void openDefinitionCloseLoop() {
+    void openDefinitionCloseLoop() {
         try {
             definition.closeLoop();
         } catch (NullPointerException e) {
@@ -133,7 +133,7 @@ final class InterpreterImpl implements Interpreter, Loader {
         }
     }
 
-    public void openDefinitionBeginTail() {
+    void openDefinitionBeginTail() {
         try {
             definition.beginTail();
         } catch (NullPointerException e) {
@@ -214,11 +214,10 @@ final class InterpreterImpl implements Interpreter, Loader {
     }
 
     String word(String requester) {
-        var next = nextToken();
-        if (next == null) {
-            throw new FjorthException(requester + ": missing name");
+        if (nextToken() instanceof String string) {
+            return string;
         }
-        return next;
+        throw new FjorthException(requester + ": missing name");
     }
 
     void print(String text) {

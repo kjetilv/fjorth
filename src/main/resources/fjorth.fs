@@ -20,6 +20,9 @@
 : HEX ( -- ) 16 BASE ! ;
 : DECIMAL ( -- ) 10 BASE ! ;
 : OCTAL ( -- 8) 8 BASE ! ;
+: PICK ( X0 I*X U.I -- X0 I*X X0 )
+  DUP 0= IF DROP DUP EXIT THEN  SWAP >R 1- RECURSE R> SWAP
+;
 : SPACE ( -- ) 32 EMIT ;
 : SPACES ( n -- ) BEGIN DUP 0 > WHILE SPACE 1- REPEAT DROP ;
 : +! ( n addr -- )  TUCK @ + SWAP ! ;

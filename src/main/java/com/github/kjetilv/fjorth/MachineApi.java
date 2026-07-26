@@ -25,6 +25,10 @@ interface MachineApi extends Machine {
 
     int base();
 
+    default void push(boolean value) {
+        push(value ? -1 : 0);
+    }
+
     void push(long value);
 
     long pop();

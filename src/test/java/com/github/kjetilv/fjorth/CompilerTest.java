@@ -1,6 +1,7 @@
 package com.github.kjetilv.fjorth;
 
 import module java.base;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -86,6 +87,21 @@ class CompilerTest extends InterpreterTestCase {
     @Test
     void commentsInsideDefinitionsAreSkipped() {
         stackAfter(": F 1 ( one ) 2 ; F \\ trailing comment", 1, 2);
+    }
+
+    @Test
+    void valueIsDefinedAndChanged() {
+        interpret("5 VALUE FOO");
+        interpret("5 TO FOO");
+        stackAfter("FOO", 5);
+    }
+
+    @Disabled
+    @Test
+    void valueIsDefinedAndChangedInWord() {
+        interpret("10 VALUE DATA");
+        interpret(": EXCHANGE ( n1 -- n2 ) DATA SWAP TO DATA ;");
+        stackAfter("5 EXCHANGE", 5);
     }
 
     @Test
