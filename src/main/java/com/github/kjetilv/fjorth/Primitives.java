@@ -829,7 +829,7 @@ final class Primitives {
             var ifAt = machine.ipop();
             int elseAt = interpreter.openDefinitionSize();
             interpreter.append(branch(-1));
-            interpreter.openDefinition().resolve(ifAt, elseAt + 1);
+            interpreter.openDefinition().redirectAt(ifAt, elseAt + 1);
             machine.push(elseAt);
         }
     }
@@ -840,7 +840,7 @@ final class Primitives {
         public void apply(InterpreterImpl interpreter) {
             var at = interpreter.machine().ipop();
             int size = interpreter.openDefinitionSize();
-            interpreter.openDefinition().resolve(at, size);
+            interpreter.openDefinition().redirectAt(at, size);
         }
     }
 
@@ -880,7 +880,7 @@ final class Primitives {
             var dest = machine.ipop();
             interpreter.append(branch(dest));
             int size = interpreter.openDefinitionSize();
-            interpreter.openDefinition().resolve(whileAt, size);
+            interpreter.openDefinition().redirectAt(whileAt, size);
         }
     }
 
@@ -1045,7 +1045,7 @@ final class Primitives {
         public void apply(InterpreterImpl interpreter) {
             var machine = interpreter.machine();
             if (machine.compiling()) {
-                interpreter.append(primitive("(value)", new To()));
+                interpreter.append(primitive("(to)", new To()));
                 var name = interpreter.word("TO");
                 interpreter.append(primitive(
                     name, () -> {

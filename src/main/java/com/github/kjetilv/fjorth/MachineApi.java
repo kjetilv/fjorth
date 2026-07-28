@@ -7,7 +7,7 @@ interface MachineApi extends Machine {
         try {
             return Math.toIntExact(pop);
         } catch (Exception e) {
-            throw new IllegalStateException("Expected int-sized value on stack: " + pop);
+            throw new IllegalStateException("Expected int-sized value on stack: " + pop, e);
         }
     }
 

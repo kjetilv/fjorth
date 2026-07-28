@@ -31,15 +31,12 @@ final class Dictionary {
     private final String wordLc;
 
     private Dictionary(Dictionary parent, Word word, Word[] words) {
-        var map = words == null
-            ? null
-            : toMap(words);
+        var map = words == null ? null : toMap(words);
         String wordLc = switch (word) {
             case Primitive(var name, var _, var _) -> lc(name);
             case Value(var name, var _) -> lc(name);
-            case Colon (var name, var _, var _) -> lc(name);
-            case Branch _, Literal _, ZeroBranch _ -> null;
-            case null -> null;
+            case Colon(var name, var _, var _) -> lc(name);
+            case null, default -> null;
         };
         this(parent, map, word, wordLc);
     }

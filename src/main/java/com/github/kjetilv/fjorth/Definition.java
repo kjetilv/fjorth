@@ -29,8 +29,8 @@ final class Definition {
         return active().size();
     }
 
-    void resolve(int index, int target) {
-        resolve(active(), index, target);
+    void redirectAt(int index, int target) {
+        redirectAt(active(), index, target);
     }
 
     void beginTail() {
@@ -65,7 +65,7 @@ final class Definition {
     void closeLoop() {
         var active = active();
         closingLoop.forEach(site ->
-            resolve(active, site, active.size()));
+            redirectAt(active, site, active.size()));
     }
 
     Word recurse() {
@@ -94,13 +94,18 @@ final class Definition {
             : body;
     }
 
-    private static void resolve(List<Word> active, int index, int target) {
-        var resolved = switch (active.get(index)) {
+    private static void redirectAt(List<Word> active, int index, int target) {
+        var adjusted = adjusted(target, active.get(index));
+        active.set(index, adjusted);
+    }
+
+    private static Word adjusted(int target, Word word) {
+        return switch (word) {
             case Word.Branch(var _) -> Word.branch(target);
             case Word.ZeroBranch(var _) -> new Word.ZeroBranch(target);
-            case Word word -> throw new FjorthException("not a branch: " + word.name());
+            case Word other ->
+                throw new FjorthException("primitive, not a branch: " + other.name());
         };
-        active.set(index, resolved);
     }
 
     private static Word retrofit(Word.Colon tailColon) {
