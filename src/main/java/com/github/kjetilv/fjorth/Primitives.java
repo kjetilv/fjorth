@@ -722,7 +722,9 @@ final class Primitives {
         @Override
         public void apply(InterpreterImpl interpreter) {
             var machine = interpreter.machine();
-            var index = index(machine.peekReturn(), machine.peekReturn(1));
+            var slot = machine.peekReturn();
+            var limit = machine.peekReturn(1);
+            var index = index(slot, limit);
             machine.push(index);
         }
     }
@@ -926,7 +928,10 @@ final class Primitives {
         @Override
         public void apply(InterpreterImpl interpreter) {
             var machine = interpreter.machine();
-            machine.push(index(machine.peekReturn(2), machine.peekReturn(3)));
+            var slot = machine.peekReturn(2);
+            var limit = machine.peekReturn(3);
+            var index = index(slot, limit);
+            machine.push(index);
         }
     }
 
